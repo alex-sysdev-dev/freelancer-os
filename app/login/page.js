@@ -1,24 +1,70 @@
+'use client';
+
+import Link from 'next/link';
+
 export default function LoginPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-950">
-      <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-10 rounded-2xl shadow-2xl w-full max-w-md">
-        <h2 className="text-3xl font-bold text-white mb-6 text-center">Sign In</h2>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-[#000a16] p-6">
+      
+      {/* Header Branding */}
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-black italic tracking-tighter text-white uppercase">
+          Freelancer<span className="text-blue-500">OS</span>
+        </h1>
+        <p className="text-blue-100/30 text-xs font-bold uppercase tracking-[0.3em] mt-2">Access Portal</p>
+      </div>
+
+      <div className="flex flex-col md:flex-row gap-8 w-full max-w-5xl">
         
-        <form className="flex flex-col gap-4">
-          <input 
-            type="email" 
-            placeholder="Email Address" 
-            className="p-3 rounded-lg bg-white/5 border border-white/10 text-white outline-none focus:border-blue-500"
-          />
-          <input 
-            type="password" 
-            placeholder="Password" 
-            className="p-3 rounded-lg bg-white/5 border border-white/10 text-white outline-none focus:border-blue-500"
-          />
-          <button className="bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-500 mt-2 transition-all">
-            Enter Dashboard
-          </button>
-        </form>
+        {/* Card 1: Candidate Portal */}
+        <div className="flex-1 p-8 bg-white/5 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-2xl flex flex-col justify-between hover:border-blue-500/30 transition-all group">
+          <div>
+            <div className="mb-6">
+              <span className="text-[10px] font-black bg-blue-500 text-white px-3 py-1 rounded-full uppercase tracking-widest">Guest</span>
+              <h2 className="text-2xl font-bold text-white mt-4">Candidate Portal</h2>
+              <p className="text-blue-100/50 text-sm mt-2">Check your application status and update your profile.</p>
+            </div>
+
+            <div className="space-y-3">
+              <button className="w-full flex items-center justify-center gap-3 bg-white/10 text-white font-bold py-3 rounded-xl hover:bg-white/20 transition-all border border-white/5">
+                Google
+              </button>
+              <button className="w-full flex items-center justify-center gap-3 bg-white/10 text-white font-bold py-3 rounded-xl hover:bg-white/20 transition-all border border-white/5">
+                LinkedIn
+              </button>
+            </div>
+          </div>
+          <p className="text-[10px] text-center text-blue-100/20 mt-6 uppercase font-bold">Registration Required</p>
+        </div>
+
+        {/* Card 2: Admin/Command Portal */}
+        <div className="flex-1 p-8 bg-blue-600/10 backdrop-blur-2xl rounded-[2.5rem] border border-blue-500/20 shadow-2xl flex flex-col justify-between hover:border-blue-500/50 transition-all">
+          <div>
+            <div className="mb-6">
+              <span className="text-[10px] font-black bg-white text-blue-600 px-3 py-1 rounded-full uppercase tracking-widest">Internal</span>
+              <h2 className="text-2xl font-bold text-white mt-4">Command Center</h2>
+              <p className="text-blue-100/50 text-sm mt-2">Full access to revenue, Analytics, and Data management.</p>
+            </div>
+
+            <div className="space-y-3">
+              <button className="w-full flex items-center justify-center gap-3 bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition-all shadow-lg shadow-blue-500/10">
+                GitHub Admin
+              </button>
+              <button className="w-full flex items-center justify-center gap-3 bg-black text-white font-bold py-3 rounded-xl hover:bg-gray-900 transition-all border border-white/10">
+                Apple ID
+              </button>
+            </div>
+          </div>
+          <p className="text-[10px] text-center text-blue-100/20 mt-6 uppercase font-bold">Authorized Personnel Only</p>
+        </div>
+
+      </div>
+
+      {/* Footer Link */}
+      <div className="mt-12">
+        <Link href="/" className="text-[10px] text-blue-100/30 hover:text-white transition-colors uppercase font-black tracking-widest">
+          ← Cancel Authorization
+        </Link>
       </div>
     </main>
   );
