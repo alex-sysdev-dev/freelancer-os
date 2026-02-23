@@ -1,87 +1,91 @@
-'use client';
-import React, { useState, useEffect } from 'react';
-import { Plus, TrendingUp } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import AddEarningForm from '@/components/AddEarningForm';
+"use client";
+import { useState, useEffect } from 'react';
 
-export default function Dashboard() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [chartData, setChartData] = useState([]);
-  const [total, setTotal] = useState(0);
+export default function AdminDashboard() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState("");
+  const [candidates, setCandidates] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const fetchData = async () => {
-    try {
-      const res = await fetch('/api/earnings');
-      const data = await res.json();
-      setChartData(data);
-      const sum = data.reduce((acc, curr) => acc + (curr.amount || 0), 0);
-      setTotal(sum);
-    } catch (err) {
-      console.error("Fetch error:", err);
+  // 1. THE GATEKEEPER FUNCTION
+  const handleLogin = (e) => {
+    e.preventDefault();
+    // This looks at the password you set in Vercel Settings
+    if (password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD) {
+      setIsAuthenticated(true);
+    } else {
+      alert("Access Denied");
     }
   };
 
+  // 2. THE DATA FETCHING (Only runs if authenticated)
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (isAuthenticated) {
+      fetch('/api/get-candidates')
+        .then(res => res.json())
+        .then(data => {
+          setCandidates(data);
+          setLoading(false);
+        });
+    }
+  }, [isAuthenticated]);
 
-  return (
-    <div className="p-8  min-h-screen text-white ">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-black tracking-tight uppercase italic">Freelancer OS</h1>
-          <div className="bg-green-100 text-green-700 px-4 py-1 rounded-full text-xs font-bold flex items-center shadow-lg shadow-green-500/20">
-            <TrendingUp size={14} className="mr-1"/> LIVE FROM AIRTABLE
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-2xl shadow-sm">
-            <p className="text-xs text-blue-100 font-black uppercase tracking-widest mb-1">Total Revenue</p>
-            <h3 className="text-4xl font-black text-white">${total.toLocaleString()}</h3>
-          </div>
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="bg-white/10 backdrop-blur-md border border-white/20 text-white p-8 rounded-2xl flex flex-col items-center justify-center hover:bg-white/20 transition-all shadow-sm"
-          >
-            <Plus className="mb-1" size={32} />
-            <span className="font-black uppercase tracking-tight text-sm">Add New Earning</span>
+  // SCREEN A: The "Locked Door" (Login Page)
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <form onSubmit={handleLogin} className="bg-zinc-900 p-8 rounded-xl border border-zinc-800 w-full max-w-md">
+          <h1 className="text-2xl font-bold text-white mb-2">Freelancer OS</h1>
+          <p className="text-zinc-400 mb-6 text-sm">Secure Admin Access</p>
+          <input 
+            type="password" 
+            placeholder="Enter Admin Password"
+            className="w-full p-3 rounded bg-black border border-zinc-700 text-white mb-4 focus:border-blue-500 outline-none"
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <button className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded transition">
+            Unlock Command Center
           </button>
-        </div>
+        </form>
+      </div>
+    );
+  }
 
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-2xl border-2 border-gray-100 shadow-sm">
-          <h2 className="text-lg font-black mb-6 uppercase tracking-widest text-gray-400">Income Stream</h2>
-          <div className="h-80 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#999', fontSize: 11}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#999', fontSize: 11}} />
-                <Tooltip 
-                  contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}}
-                  itemStyle={{fontWeight: 'bold', color: '#2563eb'}}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="amount" 
-                  name="Earning"
-                  stroke="#2563eb" 
-                  strokeWidth={6} 
-                  dot={{ r: 6, fill: '#2563eb', strokeWidth: 3, stroke: '#fff' }} 
-                />
-              </LineChart>
-            </ResponsiveContainer>
+  // SCREEN B: The "Room" (Your actual Dashboard)
+  return (
+    <div className="min-h-screen bg-black text-white p-8">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-between items-center mb-8 border-b border-zinc-800 pb-6">
+          <h1 className="text-4xl font-black tracking-tighter text-blue-500">COMMAND CENTER</h1>
+          <div className="bg-zinc-900 px-4 py-2 rounded-full border border-zinc-700 text-sm font-mono">
+            {candidates.length} APPLICANTS DETECTED
           </div>
         </div>
-      </div>
 
-      <AddEarningForm 
-        isOpen={isModalOpen} 
-        onClose={() => {
-          setIsModalOpen(false);
-          fetchData(); 
-        }} 
-      />
+        {loading ? (
+          <p className="text-zinc-500 animate-pulse">Scanning encrypted records...</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {candidates.map((person) => (
+              <div key={person.id} className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl hover:border-blue-900 transition group">
+                <h2 className="text-xl font-bold mb-1 group-hover:text-blue-400 transition">{person.name}</h2>
+                <p className="text-zinc-500 text-sm mb-4">{person.email}</p>
+                <div className="space-y-2 mb-6">
+                  <div className="text-xs text-zinc-600 uppercase font-bold tracking-widest">Experience</div>
+                  <p className="text-sm text-zinc-300 line-clamp-2">{person.experience}</p>
+                </div>
+                <a 
+                  href={person.resumeUrl} 
+                  target="_blank" 
+                  className="block text-center bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold py-2 rounded uppercase tracking-widest transition"
+                >
+                  View Dossier
+                </a>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
