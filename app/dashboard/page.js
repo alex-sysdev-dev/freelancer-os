@@ -26,31 +26,30 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div className="p-8 bg-white min-h-screen text-black">
+    <div className="p-8  min-h-screen text-white ">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-black tracking-tight uppercase italic">Freelancer OS</h1>
-          <div className="bg-green-100 text-green-700 px-4 py-1 rounded-full text-xs font-bold flex items-center">
+          <div className="bg-green-100 text-green-700 px-4 py-1 rounded-full text-xs font-bold flex items-center shadow-lg shadow-green-500/20">
             <TrendingUp size={14} className="mr-1"/> LIVE FROM AIRTABLE
           </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-gray-50 p-8 rounded-2xl border-2 border-gray-100 shadow-sm">
-            <p className="text-xs text-gray-400 font-black uppercase tracking-widest mb-1">Total Revenue</p>
-            <h3 className="text-4xl font-black text-black">${total.toLocaleString()}</h3>
+          <div className="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-2xl shadow-sm">
+            <p className="text-xs text-blue-100 font-black uppercase tracking-widest mb-1">Total Revenue</p>
+            <h3 className="text-4xl font-black text-white">${total.toLocaleString()}</h3>
           </div>
-          
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="bg-blue-600 text-white p-8 rounded-2xl flex flex-col items-center justify-center hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+            className="bg-white/10 backdrop-blur-md border border-white/20 text-white p-8 rounded-2xl flex flex-col items-center justify-center hover:bg-white/20 transition-all shadow-sm"
           >
             <Plus className="mb-1" size={32} />
             <span className="font-black uppercase tracking-tight text-sm">Add New Earning</span>
           </button>
         </div>
 
-        <div className="bg-white p-8 rounded-2xl border-2 border-gray-100 shadow-sm">
+        <div className="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-2xl border-2 border-gray-100 shadow-sm">
           <h2 className="text-lg font-black mb-6 uppercase tracking-widest text-gray-400">Income Stream</h2>
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
