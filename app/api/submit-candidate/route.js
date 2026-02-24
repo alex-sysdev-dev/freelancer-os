@@ -8,6 +8,7 @@ export async function POST(req) {
     const file = formData.get('resume');
     const name = formData.get('name');
     const email = formData.get('email');
+    const address = formData.get('address');
     const role = formData.get('role');
     const experience = formData.get('experience');
 
@@ -24,6 +25,7 @@ export async function POST(req) {
           fields: {
             Name: name,
             Email: email,
+            Address: address,
             Role: role,
             Experience: experience,
             Status: 'New',

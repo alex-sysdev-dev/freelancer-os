@@ -17,7 +17,7 @@ export default function LoginPage() {
       <div className="flex flex-col md:flex-row gap-8 w-full max-w-5xl">
         
         {/* Card 1: Candidate Portal */}
-        <div className="flex-1 p-8 bg-white/5 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-2xl flex flex-col justify-between hover:border-blue-500/30 transition-all group">
+        <div className="flex-1 p-8 bg-white/10 backdrop-blur-2xl rounded-[2.5rem] border border-white/20 shadow-2xl flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 hover:scale-[1.01] hover:border-blue-500/40 hover:shadow-[0_20px_60px_-30px_rgba(59,130,246,0.55)] group relative overflow-hidden before:absolute before:inset-0 before:rounded-[2.5rem] before:bg-[linear-gradient(135deg,rgba(255,255,255,0.25),rgba(255,255,255,0.08)_35%,rgba(255,255,255,0)_65%)] before:opacity-90 before:pointer-events-none">
           <div>
             <div className="mb-6">
               <span className="text-[10px] font-black bg-blue-500 text-white px-3 py-1 rounded-full uppercase tracking-widest">Guest</span>
@@ -38,7 +38,7 @@ export default function LoginPage() {
         </div>
 
         {/* Card 2: Admin/Command Portal */}
-        <div className="flex-1 p-8 bg-blue-600/10 backdrop-blur-2xl rounded-[2.5rem] border border-blue-500/20 shadow-2xl flex flex-col justify-between hover:border-blue-500/50 transition-all">
+        <div className="flex-1 p-8 bg-blue-600/20 backdrop-blur-2xl rounded-[2.5rem] border border-blue-400/30 shadow-2xl flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 hover:scale-[1.01] hover:border-blue-400/60 hover:shadow-[0_20px_60px_-30px_rgba(59,130,246,0.6)] relative overflow-hidden before:absolute before:inset-0 before:rounded-[2.5rem] before:bg-[linear-gradient(135deg,rgba(255,255,255,0.22),rgba(255,255,255,0.06)_35%,rgba(255,255,255,0)_65%)] before:opacity-90 before:pointer-events-none">
           <div>
             <div className="mb-6">
               <span className="text-[10px] font-black bg-white text-blue-600 px-3 py-1 rounded-full uppercase tracking-widest">Internal</span>

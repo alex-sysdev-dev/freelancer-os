@@ -65,14 +65,49 @@ export default function CandidateForm() {
               <input name="email" type="email" required placeholder="ART@VANDELAY.COM" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-blue-500 focus:bg-white/10 transition-all placeholder:text-white/10" />
             </div>
 
+            {/* Address */}
+            <div className="col-span-2">
+              <label className="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-3 ml-1">Address</label>
+              <input name="address" required placeholder="123 MAIN ST, AUSTIN, TX 78701" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-blue-500 focus:bg-white/10 transition-all placeholder:text-white/10" />
+            </div>
+
             {/* Role */}
             <div className="col-span-2 md:col-span-1">
-              <label className="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-3 ml-1">Specialization</label>
-              <select name="role" className="w-full bg-[#000a16] border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-blue-500 transition-all appearance-none cursor-pointer">
+              <label className="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-3 ml-1">Role</label>
+              <select name="role" required defaultValue="" className="w-full bg-[#000a16] border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-blue-500 transition-all appearance-none cursor-pointer">
+                <option value="" disabled>Select a role</option>
                 <option>Full Stack Developer</option>
-                <option>UI/UX Designer</option>
-                <option>System Architect</option>
-                <option>Growth Hacker</option>
+                <option>Frontend Engineer</option>
+                <option>Backend Engineer</option>
+                <option>Mobile Developer (iOS)</option>
+                <option>Mobile Developer (Android)</option>
+                <option>DevOps Engineer</option>
+                <option>Cloud Architect</option>
+                <option>Security Engineer</option>
+                <option>QA Engineer</option>
+                <option>Data Scientist</option>
+                <option>Machine Learning Engineer</option>
+                <option>AI Researcher</option>
+                <option>Data Analyst</option>
+                <option>Product Manager</option>
+                <option>Project Manager</option>
+                <option>UX/UI Designer</option>
+                <option>Graphic Designer</option>
+                <option>Motion Designer</option>
+                <option>Content Strategist</option>
+                <option>Copywriter</option>
+                <option>SEO Specialist</option>
+                <option>Growth Marketer</option>
+                <option>Paid Ads Specialist</option>
+                <option>Sales Development Rep</option>
+                <option>Account Manager</option>
+                <option>Customer Success Manager</option>
+                <option>Business Analyst</option>
+                <option>Operations Manager</option>
+                <option>Finance Analyst</option>
+                <option>HR / Recruiter</option>
+                <option>Technical Writer</option>
+                <option>Systems Architect</option>
               </select>
             </div>
 
