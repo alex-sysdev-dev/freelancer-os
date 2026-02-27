@@ -11,7 +11,7 @@ export default function LandingPage() {
             FREELANCER<span className="text-accent">OS</span>
           </h1>
           <p className="text-graphite-faint text-[10px] font-medium uppercase tracking-[0.4em]">
-            Freelance CRM
+            Freelance Portfolio
           </p>
         </div>
 
