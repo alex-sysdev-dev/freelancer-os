@@ -11,12 +11,12 @@ export default function LandingPage() {
             FREELANCER<span className="text-accent">OS</span>
           </h1>
           <p className="text-graphite-faint text-[10px] font-medium uppercase tracking-[0.4em]">
-            Solo-Operator Command Center
+            Freelance CRM
           </p>
         </div>
 
         <p className="max-w-md mx-auto text-graphite-muted leading-relaxed font-normal">
-          Manage applicants, Track project revenue, and Monitor your business growth in one centralized interface.
+          Manage Projects, Track project revenue, and Monitor Earings.
         </p>
         
         <div className="pt-4">
@@ -24,7 +24,7 @@ export default function LandingPage() {
             href="/login" 
             className="group relative inline-flex items-center justify-center px-12 py-5 font-semibold text-white bg-[#8b6d4b] rounded-2xl transition-all duration-200 hover:bg-[#9a7a55] hover:shadow-[0_0_40px_8px_rgba(139,109,75,0.35)] active:scale-95"
           >
-            INITIALIZE SYSTEM
+            Welcome
           </Link>
         </div>
       </div>
