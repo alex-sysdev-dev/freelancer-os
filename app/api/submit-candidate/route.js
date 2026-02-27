@@ -11,6 +11,7 @@ export async function POST(req) {
     const address = formData.get('address');
     const role = formData.get('role');
     const experience = formData.get('experience');
+    const about = formData.get('about');
 
     // 2. Upload the Resume to your Vercel Blob
     const blob = await put(file.name, file, {
@@ -28,6 +29,7 @@ export async function POST(req) {
             Address: address,
             Role: role,
             Experience: experience,
+            About: about,
             Status: 'New',
             Resume: [{ url: blob.url }] // This tells Airtable where to "grab" the file from
           },

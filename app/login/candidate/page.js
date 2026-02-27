@@ -32,14 +32,14 @@ export default function CandidateForm() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#000a16] p-4 font-sans">
-      <div className="w-full max-w-xl p-6 md:p-8 bg-white/5 backdrop-blur-2xl rounded-[2.25rem] border border-white/10 shadow-2xl">
+    <main className="flex min-h-screen items-center justify-center p-4 text-[#2f2a25]">
+      <div className="w-full max-w-xl p-6 md:p-8 glass-tile">
         
         <div className="mb-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-black text-white italic uppercase tracking-tighter">
-            Join <span className="text-blue-500">The Squad</span>
+          <h2 className="text-3xl md:text-4xl font-semibold text-[#2f2a25] uppercase tracking-tight">
+            Join <span className="text-accent">The Squad</span>
           </h2>
-          <p className="text-blue-100/30 text-[10px] font-black uppercase tracking-[0.35em] mt-2">Candidate Onboarding</p>
+          <p className="text-graphite-faint text-[10px] font-medium uppercase tracking-[0.35em] mt-2">Candidate Onboarding</p>
         </div>
 
         {status === 'success' ? (
@@ -47,34 +47,34 @@ export default function CandidateForm() {
             <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/50">
               <span className="text-3xl">✓</span>
             </div>
-            <h3 className="text-2xl font-black text-white uppercase italic">Transmission Received</h3>
-            <p className="text-blue-100/40 mt-2 font-bold uppercase text-xs tracking-widest">Airtable has been updated. Stand by for contact.</p>
-            <button onClick={() => setStatus('idle')} className="mt-8 text-blue-500 font-black uppercase text-[10px] tracking-widest hover:text-white transition-colors">Submit Another?</button>
+            <h3 className="text-2xl font-semibold text-[#2f2a25] uppercase">Transmission Received</h3>
+            <p className="text-graphite-muted mt-2 font-medium uppercase text-xs tracking-widest">Airtable has been updated. Stand by for contact.</p>
+            <button onClick={() => setStatus('idle')} className="mt-8 text-accent font-semibold uppercase text-[10px] tracking-widest hover:text-[#2f2a25] transition-colors">Submit Another?</button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-5">
             {/* Name */}
             <div className="col-span-2 md:col-span-1">
-              <label className="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-3 ml-1 text-shadow-glow">Full Name</label>
-              <input name="name" required placeholder="ART VANDELAY" className="w-full bg-white/5 border border-white/10 p-3 rounded-2xl text-white outline-none focus:border-blue-500 focus:bg-white/10 transition-all placeholder:text-white/10" />
+              <label className="block text-[10px] font-semibold text-accent uppercase tracking-widest mb-3 ml-1 text-shadow-glow">Full Name</label>
+              <input name="name" required placeholder="ART VANDELAY" className="w-full bg-[#f7f2ea] border border-[#e6d8c6] p-3 rounded-2xl text-[#2f2a25] outline-none focus:border-[#9a7a55] focus:bg-white transition-all placeholder:text-[#6f5c48]/50" />
             </div>
 
             {/* Email */}
             <div className="col-span-2 md:col-span-1">
-              <label className="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-3 ml-1">Email Address</label>
-              <input name="email" type="email" required placeholder="ART@VANDELAY.COM" className="w-full bg-white/5 border border-white/10 p-3 rounded-2xl text-white outline-none focus:border-blue-500 focus:bg-white/10 transition-all placeholder:text-white/10" />
+              <label className="block text-[10px] font-semibold text-accent uppercase tracking-widest mb-3 ml-1">Email Address</label>
+              <input name="email" type="email" required placeholder="ART@VANDELAY.COM" className="w-full bg-[#f7f2ea] border border-[#e6d8c6] p-3 rounded-2xl text-[#2f2a25] outline-none focus:border-[#9a7a55] focus:bg-white transition-all placeholder:text-[#6f5c48]/50" />
             </div>
 
             {/* Address */}
             <div className="col-span-2">
-              <label className="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-3 ml-1">Address</label>
-              <input name="address" required placeholder="123 MAIN ST, AUSTIN, TX 78701" className="w-full bg-white/5 border border-white/10 p-3 rounded-2xl text-white outline-none focus:border-blue-500 focus:bg-white/10 transition-all placeholder:text-white/10" />
+              <label className="block text-[10px] font-semibold text-accent uppercase tracking-widest mb-3 ml-1">Address</label>
+              <input name="address" required placeholder="123 MAIN ST, AUSTIN, TX 78701" className="w-full bg-[#f7f2ea] border border-[#e6d8c6] p-3 rounded-2xl text-[#2f2a25] outline-none focus:border-[#9a7a55] focus:bg-white transition-all placeholder:text-[#6f5c48]/50" />
             </div>
 
             {/* Role */}
             <div className="col-span-2 md:col-span-1">
-              <label className="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-3 ml-1">Role</label>
-              <select name="role" required defaultValue="" className="w-full bg-[#000a16] border border-white/10 p-3 rounded-2xl text-white outline-none focus:border-blue-500 transition-all appearance-none cursor-pointer">
+              <label className="block text-[10px] font-semibold text-accent uppercase tracking-widest mb-3 ml-1">Role</label>
+              <select name="role" required defaultValue="" className="w-full bg-[#f7f2ea] border border-[#e6d8c6] p-3 rounded-2xl text-[#2f2a25] outline-none focus:border-[#9a7a55] transition-all appearance-none cursor-pointer">
                 <option value="" disabled>Select a role</option>
                 <option>Full Stack Developer</option>
                 <option>Frontend Engineer</option>
@@ -113,19 +113,31 @@ export default function CandidateForm() {
 
             {/* Experience */}
             <div className="col-span-2 md:col-span-1">
-              <label className="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-3 ml-1">Experience</label>
-              <input name="experience" required placeholder="E.G. 5 YEARS" className="w-full bg-white/5 border border-white/10 p-3 rounded-2xl text-white outline-none focus:border-blue-500 focus:bg-white/10 transition-all placeholder:text-white/10" />
+              <label className="block text-[10px] font-semibold text-accent uppercase tracking-widest mb-3 ml-1">Experience</label>
+              <input name="experience" required placeholder="E.G. 5 YEARS" className="w-full bg-[#f7f2ea] border border-[#e6d8c6] p-3 rounded-2xl text-[#2f2a25] outline-none focus:border-[#9a7a55] focus:bg-white transition-all placeholder:text-[#6f5c48]/50" />
+            </div>
+
+            {/* About */}
+            <div className="col-span-2">
+              <label className="block text-[10px] font-semibold text-accent uppercase tracking-widest mb-3 ml-1">Tell Us About Yourself</label>
+              <textarea
+                name="about"
+                required
+                rows={4}
+                placeholder="Quick background, your strengths, and what you love building."
+                className="w-full bg-[#f7f2ea] border border-[#e6d8c6] p-3 rounded-2xl text-[#2f2a25] outline-none focus:border-[#9a7a55] focus:bg-white transition-all placeholder:text-[#6f5c48]/50 resize-none"
+              />
             </div>
 
             {/* Resume Upload */}
-            <div className="col-span-2 bg-white/5 p-4 rounded-3xl border border-dashed border-white/10 hover:border-blue-500/50 transition-colors">
-              <label className="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-4 text-center">Attach Resume (PDF Format Only)</label>
+            <div className="col-span-2 glass-tile p-4 border border-dashed border-[#e6d8c6] hover:border-[#9a7a55]/50 transition-colors">
+              <label className="block text-[10px] font-semibold text-accent uppercase tracking-widest mb-4 text-center">Attach Resume (PDF Format Only)</label>
               <input 
                 name="resume" 
                 type="file" 
                 accept=".pdf"
                 required 
-                className="block w-full text-xs text-blue-100/40 file:mr-4 file:py-2 file:px-6 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-blue-600 file:text-white hover:file:bg-blue-500 file:cursor-pointer file:uppercase file:tracking-widest transition-all"
+                className="block w-full text-xs text-graphite-faint file:mr-4 file:py-2 file:px-6 file:rounded-full file:border-0 file:text-[10px] file:font-semibold file:bg-[#8b6d4b] file:text-white hover:file:bg-[#9a7a55] file:cursor-pointer file:uppercase file:tracking-widest transition-all"
               />
             </div>
 
@@ -134,20 +146,20 @@ export default function CandidateForm() {
               <button 
                 disabled={status === 'sending'}
                 type="submit" 
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-blue-600/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-[0.2em]"
+                className="w-full bg-[#8b6d4b] hover:bg-[#9a7a55] text-white font-semibold py-4 rounded-2xl transition-all shadow-xl shadow-black/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-[0.2em]"
               >
                 {status === 'sending' ? 'Sending to Command...' : 'Launch Application'}
               </button>
               
               {status === 'error' && (
-                <p className="text-red-400 text-center font-bold mt-4 text-[10px] uppercase tracking-widest">✕ Connection Error. Check your connection.</p>
+                <p className="text-red-400 text-center font-semibold mt-4 text-[10px] uppercase tracking-widest">✕ Connection Error. Check your connection.</p>
               )}
             </div>
           </form>
         )}
 
-        <div className="mt-8 text-center border-t border-white/5 pt-6">
-          <Link href="/login" className="text-[10px] text-blue-100/20 hover:text-blue-400 transition-colors uppercase font-black tracking-[0.3em]">
+        <div className="mt-8 text-center border-t border-[#e6d8c6] pt-6">
+          <Link href="/login" className="text-[10px] text-graphite-faint hover:text-[#9a7a55] transition-colors uppercase font-semibold tracking-[0.3em]">
             ← Return to Portal
           </Link>
         </div>
