@@ -22,6 +22,17 @@ import AddEarningForm from '@/components/AddEarningForm';
 
 const CHART_COLORS = ['#5ec7b7', '#7fb5ff', '#7a8fff', '#8de4d6', '#59a8e2', '#a4b8ff'];
 
+function LinkedTile({ href, className, children }) {
+  const classes = `${className} ${href ? 'block cursor-pointer hover:border-[#5ec7b7] transition-colors' : ''}`;
+  if (!href) return <div className={classes}>{children}</div>;
+
+  return (
+    <a href={href} target="_blank" rel="noreferrer" className={classes}>
+      {children}
+    </a>
+  );
+}
+
 function usd(value) {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -253,6 +264,13 @@ export default function AdminDashboard() {
     day: 'numeric',
     year: 'numeric',
   });
+  const baseAirtableLink = process.env.NEXT_PUBLIC_AIRTABLE_BASE_URL || '';
+  const airtableLinks = {
+    earnings: process.env.NEXT_PUBLIC_AIRTABLE_LINK_EARNINGS || baseAirtableLink,
+    activeEarnings: process.env.NEXT_PUBLIC_AIRTABLE_LINK_ACTIVE_EARNINGS || baseAirtableLink,
+    client: process.env.NEXT_PUBLIC_AIRTABLE_LINK_CLIENT || baseAirtableLink,
+    applicants: process.env.NEXT_PUBLIC_AIRTABLE_LINK_APPLICANTS || baseAirtableLink,
+  };
 
   return (
     <div className="min-h-screen p-6 md:p-8 text-white">
@@ -276,31 +294,43 @@ export default function AdminDashboard() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          <div className="glass-tile p-5 border border-[#2f4b70]">
-            <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Lifetime paid</p>
+          <LinkedTile href={airtableLinks.earnings} className="glass-tile p-5 border border-[#2f4b70]">
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Lifetime paid</p>
+              <span className="text-[10px] uppercase text-graphite-faint">Earnings.Status</span>
+            </div>
             <p className="text-2xl font-semibold mt-2">{earningsLoading ? '--' : usd(analytics.paidTotal)}</p>
-          </div>
-          <div className="glass-tile p-5 border border-[#2f4b70]">
-            <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Pending pipeline</p>
+          </LinkedTile>
+          <LinkedTile href={airtableLinks.earnings} className="glass-tile p-5 border border-[#2f4b70]">
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Pending pipeline</p>
+              <span className="text-[10px] uppercase text-graphite-faint">Earnings.Status</span>
+            </div>
             <p className="text-2xl font-semibold mt-2">{earningsLoading ? '--' : usd(analytics.pendingTotal)}</p>
-          </div>
-          <div className="glass-tile p-5 border border-[#2f4b70]">
-            <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Month paid</p>
+          </LinkedTile>
+          <LinkedTile href={airtableLinks.earnings} className="glass-tile p-5 border border-[#2f4b70]">
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Month paid</p>
+              <span className="text-[10px] uppercase text-graphite-faint">Earnings.Date</span>
+            </div>
             <p className="text-2xl font-semibold mt-2">{earningsLoading ? '--' : usd(analytics.monthlyPaid)}</p>
-          </div>
-          <div className="glass-tile p-5 border border-[#2f4b70]">
-            <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Forecast end of month</p>
+          </LinkedTile>
+          <LinkedTile href={airtableLinks.earnings} className="glass-tile p-5 border border-[#2f4b70]">
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Forecast end of month</p>
+              <span className="text-[10px] uppercase text-graphite-faint">Earnings.Hours+Tags</span>
+            </div>
             <p className="text-2xl font-semibold mt-2 text-accent">
               {earningsLoading ? '--' : usd(analytics.forecastEndOfMonth)}
             </p>
-          </div>
+          </LinkedTile>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2 glass-tile-dark p-5 border border-[#2f4b70]">
+          <LinkedTile href={airtableLinks.earnings} className="xl:col-span-2 glass-tile-dark p-5 border border-[#2f4b70]">
             <div className="flex items-center justify-between mb-4">
               <p className="text-xs uppercase tracking-[0.2em] text-graphite-faint">Current month forecast</p>
-              <p className="text-sm text-graphite-faint">MTD {usd(analytics.earnedToDate)}</p>
+              <p className="text-sm text-graphite-faint">MTD {usd(analytics.earnedToDate)} - Earnings.Date</p>
             </div>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
@@ -324,10 +354,13 @@ export default function AdminDashboard() {
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          </LinkedTile>
 
-          <div className="glass-tile-dark p-5 border border-[#2f4b70]">
-            <p className="text-xs uppercase tracking-[0.2em] text-graphite-faint mb-4">Revenue by platform</p>
+          <LinkedTile href={airtableLinks.earnings} className="glass-tile-dark p-5 border border-[#2f4b70]">
+            <div className="flex items-start justify-between gap-2 mb-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-graphite-faint">Revenue by platform</p>
+              <span className="text-[10px] uppercase text-graphite-faint">Earnings.Platform</span>
+            </div>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -352,12 +385,15 @@ export default function AdminDashboard() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          </LinkedTile>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <div className="glass-tile p-5 border border-[#2f4b70]">
-            <p className="text-xs uppercase tracking-[0.2em] text-graphite-faint mb-4">Weekly cashflow (paid vs pending)</p>
+          <LinkedTile href={airtableLinks.earnings} className="glass-tile p-5 border border-[#2f4b70]">
+            <div className="flex items-start justify-between gap-2 mb-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-graphite-faint">Weekly cashflow (paid vs pending)</p>
+              <span className="text-[10px] uppercase text-graphite-faint">Earnings.Date+Status</span>
+            </div>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={analytics.weeklyCashflow}>
@@ -374,10 +410,13 @@ export default function AdminDashboard() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          </LinkedTile>
 
-          <div className="glass-tile p-5 border border-[#2f4b70]">
-            <p className="text-xs uppercase tracking-[0.2em] text-graphite-faint mb-4">Monthly trend</p>
+          <LinkedTile href={airtableLinks.earnings} className="glass-tile p-5 border border-[#2f4b70]">
+            <div className="flex items-start justify-between gap-2 mb-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-graphite-faint">Monthly trend</p>
+              <span className="text-[10px] uppercase text-graphite-faint">Earnings.Date</span>
+            </div>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={analytics.monthlyTrend}>
@@ -392,12 +431,15 @@ export default function AdminDashboard() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          </LinkedTile>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <div className="glass-tile p-5 border border-[#2f4b70]">
-            <p className="text-xs uppercase tracking-[0.2em] text-graphite-faint mb-4">Recent earnings events</p>
+          <LinkedTile href={airtableLinks.earnings} className="glass-tile p-5 border border-[#2f4b70]">
+            <div className="flex items-start justify-between gap-2 mb-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-graphite-faint">Recent earnings events</p>
+              <span className="text-[10px] uppercase text-graphite-faint">Earnings.Rows</span>
+            </div>
             <div className="space-y-3 max-h-[360px] overflow-auto pr-1">
               {analytics.recentEarnings.length === 0 && (
                 <p className="text-sm text-graphite-faint">No earnings logged yet.</p>
@@ -415,10 +457,13 @@ export default function AdminDashboard() {
                 </div>
               ))}
             </div>
-          </div>
+          </LinkedTile>
 
-          <div className="glass-tile p-5 border border-[#2f4b70]">
-            <p className="text-xs uppercase tracking-[0.2em] text-graphite-faint mb-4">Client tracker</p>
+          <LinkedTile href={airtableLinks.applicants} className="glass-tile p-5 border border-[#2f4b70]">
+            <div className="flex items-start justify-between gap-2 mb-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-graphite-faint">Client tracker</p>
+              <span className="text-[10px] uppercase text-graphite-faint">Applicants.Name/Status</span>
+            </div>
             <div className="space-y-3 max-h-[360px] overflow-auto pr-1">
               {!clientsLoading && clients.length === 0 && (
                 <p className="text-sm text-graphite-faint">No client records found.</p>
@@ -437,7 +482,7 @@ export default function AdminDashboard() {
                 </div>
               ))}
             </div>
-          </div>
+          </LinkedTile>
         </div>
       </div>
     </div>
