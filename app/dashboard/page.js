@@ -408,7 +408,7 @@ export default function AdminDashboard() {
                   <div>
                     <p className="font-medium">{entry.platform}</p>
                     <p className="text-xs text-graphite-faint">
-                      {entry.project || 'Unmapped project'} · {new Date(entry.date).toLocaleDateString('en-US')} · {entry.status || 'Pending'}
+                      {entry.project || 'Unmapped project'}  -  {new Date(entry.date).toLocaleDateString('en-US')}  -  {entry.status || 'Pending'}
                     </p>
                   </div>
                   <p className="font-semibold text-accent">{usd(entry.amount)}</p>
@@ -428,7 +428,7 @@ export default function AdminDashboard() {
                 <div key={client.id} className="rounded-xl border border-[#2a3f5d] bg-[#0d1522] p-3 flex items-center justify-between gap-3">
                   <div>
                     <p className="font-medium">{client.name}</p>
-                    <p className="text-xs text-graphite-faint">{client.role} · {client.email}</p>
+                    <p className="text-xs text-graphite-faint">{client.role}  -  {client.email}</p>
                     <p className="text-xs text-graphite-faint">Experience: {client.experience}</p>
                   </div>
                   <span className="text-[10px] uppercase tracking-widest px-2 py-1 rounded-full bg-[#17314f] text-[#9ec5ff] border border-[#365a84]">
