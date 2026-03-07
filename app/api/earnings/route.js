@@ -16,6 +16,86 @@ function errorResponse(status, code, message, details = {}) {
   return NextResponse.json({ error: message, code, details }, { status });
 }
 
+function uniqueValues(values) {
+  const seen = new Set();
+  const result = [];
+  for (const value of values) {
+    if (value === undefined) continue;
+    const key = JSON.stringify(value);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(value);
+  }
+  return result;
+}
+
+function normalizeTagText(value) {
+  if (typeof value !== 'string') return '';
+  return value.trim();
+}
+
+function buildTagVariants(rawTags) {
+  const tagText = normalizeTagText(rawTags);
+  if (!tagText) return [];
+
+  const splitTags = tagText
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+
+  return uniqueValues([tagText, splitTags.length ? splitTags : undefined]);
+}
+
+async function createEarningWithFallbacks({
+  tableName,
+  fieldsByLogicalName,
+  statusValue,
+}) {
+  const errors = [];
+
+  const { platformField, hoursField, dateField, tagsField, statusField } = fieldsByLogicalName;
+  const statusCandidates = uniqueValues([statusValue, undefined]);
+
+  const attempts = [];
+  for (const hours of fieldsByLogicalName.hoursCandidates) {
+    for (const tags of fieldsByLogicalName.tagCandidates) {
+      for (const status of statusCandidates) {
+        const fields = {
+          [platformField]: fieldsByLogicalName.platformValue,
+          [hoursField]: hours,
+          [dateField]: fieldsByLogicalName.dateValue,
+        };
+
+        if (tags !== undefined && tags !== '') {
+          fields[tagsField] = tags;
+        }
+
+        if (status !== undefined && status !== '' && statusField) {
+          fields[statusField] = status;
+        }
+
+        attempts.push(fields);
+      }
+    }
+  }
+
+  for (const fields of attempts) {
+    const result = await createRecord({
+      tableName,
+      fields,
+      typecast: true,
+    });
+
+    if (result.ok) {
+      return { ok: true, result };
+    }
+
+    errors.push(result.error?.message || 'Unknown Airtable create failure');
+  }
+
+  return { ok: false, errors };
+}
+
 export async function GET() {
   const schema = getAirtableSchema();
   const earningsResult = await fetchAllRecords({
@@ -63,7 +143,7 @@ export async function POST(req) {
   const date = payload.date;
   const hoursWorked = toFiniteNumber(payload.hoursWorked ?? payload.amount);
   const providedProject = typeof payload.project === 'string' ? payload.project.trim() : '';
-  let tags = typeof payload.tags === 'string' ? payload.tags.trim() : '';
+  const providedTags = typeof payload.tags === 'string' ? payload.tags.trim() : '';
 
   if (!platform || !date) {
     return errorResponse(
@@ -81,11 +161,10 @@ export async function POST(req) {
     );
   }
 
-  if (!tags && providedProject) {
-    tags = providedProject;
-  }
+  const tagText = providedTags || providedProject;
+  const tagVariants = buildTagVariants(tagText);
 
-  if (tags && !parseProjectFromTags(tags)) {
+  if (tagText && !parseProjectFromTags(tagText)) {
     return errorResponse(
       400,
       'INVALID_TAG_FORMAT',
@@ -94,44 +173,51 @@ export async function POST(req) {
   }
 
   const schema = getAirtableSchema();
-  const fields = {
-    [getPreferredFieldName(schema, 'earnings', 'platform')]: platform,
-    [getPreferredFieldName(schema, 'earnings', 'hoursWorked')]: hoursWorked,
-    [getPreferredFieldName(schema, 'earnings', 'date')]: date,
-  };
+  const prefersDuration = process.env.AIRTABLE_HOURS_IS_DURATION !== 'false';
+  const hoursAsSeconds = Math.round(hoursWorked * 3600);
+  const hoursCandidates = prefersDuration
+    ? uniqueValues([hoursAsSeconds, hoursWorked])
+    : uniqueValues([hoursWorked, hoursAsSeconds]);
 
-  if (tags) {
-    fields[getPreferredFieldName(schema, 'earnings', 'tags')] = tags;
-  }
-
-  if (payload.status) {
-    fields[getPreferredFieldName(schema, 'earnings', 'status')] = payload.status;
-  }
-
-  const created = await createRecord({
+  const statusValue = payload.status || 'Paid';
+  const created = await createEarningWithFallbacks({
     tableName: schema.tables.earnings,
-    fields,
+    fieldsByLogicalName: {
+      platformField: getPreferredFieldName(schema, 'earnings', 'platform'),
+      hoursField: getPreferredFieldName(schema, 'earnings', 'hoursWorked'),
+      dateField: getPreferredFieldName(schema, 'earnings', 'date'),
+      tagsField: getPreferredFieldName(schema, 'earnings', 'tags'),
+      statusField: getPreferredFieldName(schema, 'earnings', 'status'),
+      platformValue: platform,
+      dateValue: date,
+      hoursCandidates,
+      tagCandidates: uniqueValues([...tagVariants, undefined]),
+    },
+    statusValue,
   });
 
   if (!created.ok) {
     return errorResponse(
-      created.status || 500,
-      created.error?.code || 'EARNINGS_CREATE_FAILED',
-      created.error?.message || 'Failed to create earnings entry',
-      { table: schema.tables.earnings }
+      500,
+      'EARNINGS_CREATE_FAILED',
+      'Failed to create earnings entry',
+      {
+        table: schema.tables.earnings,
+        attempts: created.errors,
+      }
     );
   }
 
   return NextResponse.json({
-    id: created.data?.id,
+    id: created.result.data?.id,
     source: platform,
     amount: hoursWorked,
     date,
     platform,
-    project: parseProjectFromTags(tags),
+    project: parseProjectFromTags(tagText),
     hoursWorked,
     ratePerHour: null,
-    tags: tags || '',
-    status: payload.status || null,
+    tags: tagText || '',
+    status: statusValue,
   });
 }

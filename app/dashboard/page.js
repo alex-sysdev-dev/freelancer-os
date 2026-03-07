@@ -114,7 +114,7 @@ export default function AdminDashboard() {
           dateObj: parsedDate,
           amount,
           platform: entry.platform || entry.source || 'Unknown',
-          status: entry.status || 'Pending',
+          status: entry.status || 'Paid',
         };
       })
       .filter(Boolean);

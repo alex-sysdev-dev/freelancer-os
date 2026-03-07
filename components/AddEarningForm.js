@@ -7,7 +7,7 @@ const INITIAL_STATE = {
   project: '',
   hoursWorked: '',
   date: new Date().toISOString().split('T')[0],
-  status: 'Pending',
+  status: 'Paid',
 };
 
 export default function AddEarningForm() {
