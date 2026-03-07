@@ -82,14 +82,14 @@ export async function POST(req) {
   }
 
   if (!tags && providedProject) {
-    tags = `project:${providedProject}`;
+    tags = providedProject;
   }
 
   if (tags && !parseProjectFromTags(tags)) {
     return errorResponse(
       400,
       'INVALID_TAG_FORMAT',
-      'Tags must include project in the format project:<name>'
+      'Tags must include a project value'
     );
   }
 
