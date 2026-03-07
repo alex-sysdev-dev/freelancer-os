@@ -1,45 +1,44 @@
 import { NextResponse } from 'next/server';
+import { fetchAllRecords } from '@/lib/airtable/client';
+import { getAirtableSchema, pickRecordValue } from '@/lib/airtable/schema';
+
+function errorResponse(status, code, message, details = {}) {
+  return NextResponse.json({ error: message, code, details }, { status });
+}
 
 export async function GET() {
-  try {
-    const apiKey = process.env.AIRTABLE_API_KEY;
-    const baseId = process.env.AIRTABLE_BASE_ID;
-    const tableName = process.env.AIRTABLE_TABLE_NAME;
+  const schema = getAirtableSchema();
+  const applicantsConfig = schema.entities.applicants.fields;
 
-    // Check if variables exist at all
-    if (!apiKey || !baseId || !tableName) {
-      console.error("❌ Missing Airtable Environment Variables");
-      return NextResponse.json({ error: "Configuration missing" }, { status: 500 });
-    }
+  const response = await fetchAllRecords({ tableName: schema.tables.applicants });
 
-    const response = await fetch(
-      `https://api.airtable.com/v0/${baseId}/${tableName}`,
-      {
-        headers: { Authorization: `Bearer ${apiKey}` },
-        next: { revalidate: 0 }, 
-      }
+  if (!response.ok) {
+    return errorResponse(
+      response.status || 500,
+      response.error?.code || 'APPLICANTS_READ_FAILED',
+      response.error?.message || 'Unable to read applicants table',
+      { table: schema.tables.applicants }
     );
-
-    const data = await response.json();
-
-    // The Fix: Check if records exists before mapping
-    if (!data.records || !Array.isArray(data.records)) {
-      console.error("❌ Airtable API Error:", data);
-      return NextResponse.json([]); // Return empty list instead of crashing
-    }
-
-    const formatted = data.records.map(record => ({
-      id: record.id,
-      name: record.fields.Name || "Anonymous",
-      email: record.fields.Email || "No Email",
-      experience: record.fields.Experience || "No details provided",
-      resumeUrl: record.fields.Resume?.[0]?.url || "#",
-    }));
-
-    return NextResponse.json(formatted);
-
-  } catch (error) {
-    console.error("❌ API Route Crash:", error);
-    return NextResponse.json([], { status: 500 });
   }
+
+  const formatted = response.data.records.map((record) => {
+    const fields = record?.fields || {};
+    const resumeValue = pickRecordValue(fields, applicantsConfig.resume);
+
+    return {
+      id: record.id,
+      name: pickRecordValue(fields, applicantsConfig.name) || 'Unnamed Client',
+      email: pickRecordValue(fields, applicantsConfig.email) || 'No Email',
+      role: pickRecordValue(fields, applicantsConfig.role) || 'General',
+      experience: pickRecordValue(fields, applicantsConfig.experience) || 'No details provided',
+      status: pickRecordValue(fields, applicantsConfig.status) || 'Unknown',
+      resumeUrl: Array.isArray(resumeValue)
+        ? resumeValue[0]?.url || '#'
+        : typeof resumeValue === 'string'
+          ? resumeValue
+          : '#',
+    };
+  });
+
+  return NextResponse.json(formatted);
 }

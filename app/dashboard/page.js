@@ -1,223 +1,444 @@
 "use client";
-import { useState, useEffect } from 'react';
+
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import AddEarningForm from '@/components/AddEarningForm';
+
+const CHART_COLORS = ['#5ec7b7', '#7fb5ff', '#7a8fff', '#8de4d6', '#59a8e2', '#a4b8ff'];
+
+function usd(value) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2,
+  }).format(value || 0);
+}
+
+function weekStartLabel(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const offset = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + offset);
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString().slice(0, 10);
+}
+
+function monthKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
 
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState("");
-  const [candidates, setCandidates] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [password, setPassword] = useState('');
+  const [clients, setClients] = useState([]);
   const [earnings, setEarnings] = useState([]);
+  const [clientsLoading, setClientsLoading] = useState(true);
   const [earningsLoading, setEarningsLoading] = useState(true);
 
   const handleLogin = (e) => {
     e.preventDefault();
     if (password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD) {
       setIsAuthenticated(true);
-    } else {
-      alert("Access Denied");
+      return;
     }
+    alert('Access denied');
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetch('/api/get-candidates')
-        .then(res => res.json())
-        .then(data => {
-          setCandidates(Array.isArray(data) ? data : []);
-          setLoading(false);
-        })
-        .catch(() => setLoading(false));
+    if (!isAuthenticated) return;
 
-      fetch('/api/earnings')
-        .then(res => res.json())
-        .then(data => {
-          setEarnings(Array.isArray(data) ? data : []);
-          setEarningsLoading(false);
-        })
-        .catch(() => setEarningsLoading(false));
-    }
+    fetch('/api/get-candidates')
+      .then((res) => res.json())
+      .then((data) => {
+        setClients(Array.isArray(data) ? data : []);
+      })
+      .catch(() => setClients([]))
+      .finally(() => setClientsLoading(false));
+
+    fetch('/api/earnings')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setEarnings(data);
+          return;
+        }
+        setEarnings(Array.isArray(data?.records) ? data.records : []);
+      })
+      .catch(() => setEarnings([]))
+      .finally(() => setEarningsLoading(false));
   }, [isAuthenticated]);
+
+  const analytics = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    const normalized = earnings
+      .map((entry) => {
+        const parsedDate = entry?.date ? new Date(entry.date) : null;
+        const amount = typeof entry?.amount === 'number' ? entry.amount : Number(entry?.amount);
+
+        if (!parsedDate || Number.isNaN(parsedDate.getTime()) || !Number.isFinite(amount)) {
+          return null;
+        }
+
+        return {
+          ...entry,
+          dateObj: parsedDate,
+          amount,
+          platform: entry.platform || entry.source || 'Unknown',
+          status: entry.status || 'Pending',
+        };
+      })
+      .filter(Boolean);
+
+    const paidTotal = normalized
+      .filter((item) => String(item.status).toLowerCase() === 'paid')
+      .reduce((sum, item) => sum + item.amount, 0);
+
+    const pendingTotal = normalized
+      .filter((item) => String(item.status).toLowerCase() !== 'paid')
+      .reduce((sum, item) => sum + item.amount, 0);
+
+    const monthEntries = normalized.filter(
+      (item) => item.dateObj.getFullYear() === currentYear && item.dateObj.getMonth() === currentMonth
+    );
+
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const today = now.getDate();
+    const dailyNet = Array.from({ length: daysInMonth }, (_, dayIndex) => {
+      const day = dayIndex + 1;
+      const total = monthEntries
+        .filter((item) => item.dateObj.getDate() === day)
+        .reduce((sum, item) => sum + item.amount, 0);
+      return total;
+    });
+
+    const cumulative = [];
+    let running = 0;
+    for (let i = 0; i < today; i += 1) {
+      running += dailyNet[i] || 0;
+      cumulative.push(running);
+    }
+
+    const avgDaily = today > 0 ? running / today : 0;
+    const forecastSeries = [];
+    for (let i = 0; i < daysInMonth; i += 1) {
+      if (i < today) {
+        forecastSeries.push(cumulative[i] ?? running);
+      } else {
+        forecastSeries.push(running + avgDaily * (i + 1 - today));
+      }
+    }
+
+    const monthForecastChart = Array.from({ length: daysInMonth }, (_, i) => ({
+      day: i + 1,
+      actual: i < cumulative.length ? Math.round((cumulative[i] || 0) * 100) / 100 : null,
+      forecast: Math.round((forecastSeries[i] || 0) * 100) / 100,
+    }));
+
+    const weeklyMap = new Map();
+    for (const item of normalized) {
+      const key = weekStartLabel(item.dateObj);
+      if (!weeklyMap.has(key)) {
+        weeklyMap.set(key, {
+          week: key,
+          paid: 0,
+          pending: 0,
+          total: 0,
+        });
+      }
+      const bucket = weeklyMap.get(key);
+      bucket.total += item.amount;
+      if (String(item.status).toLowerCase() === 'paid') bucket.paid += item.amount;
+      else bucket.pending += item.amount;
+    }
+
+    const weeklyCashflow = [...weeklyMap.values()]
+      .sort((a, b) => new Date(a.week).getTime() - new Date(b.week).getTime())
+      .slice(-10)
+      .map((row) => ({
+        ...row,
+        paid: Math.round(row.paid * 100) / 100,
+        pending: Math.round(row.pending * 100) / 100,
+        total: Math.round(row.total * 100) / 100,
+      }));
+
+    const platformMap = new Map();
+    for (const item of normalized) {
+      const key = item.platform || 'Unknown';
+      platformMap.set(key, (platformMap.get(key) || 0) + item.amount);
+    }
+
+    const platformTotals = [...platformMap.entries()]
+      .map(([platform, amount]) => ({
+        platform,
+        amount: Math.round(amount * 100) / 100,
+      }))
+      .sort((a, b) => b.amount - a.amount);
+
+    const monthMap = new Map();
+    for (const item of normalized) {
+      const key = monthKey(item.dateObj);
+      monthMap.set(key, (monthMap.get(key) || 0) + item.amount);
+    }
+
+    const monthlyTrend = [...monthMap.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .slice(-8)
+      .map(([key, total]) => ({
+        month: key,
+        total: Math.round(total * 100) / 100,
+      }));
+
+    const earnedToDate = cumulative[cumulative.length - 1] || 0;
+    const forecastEndOfMonth = forecastSeries[forecastSeries.length - 1] || 0;
+
+    return {
+      paidTotal,
+      pendingTotal,
+      monthlyPaid: monthEntries
+        .filter((item) => String(item.status).toLowerCase() === 'paid')
+        .reduce((sum, item) => sum + item.amount, 0),
+      earnedToDate,
+      forecastEndOfMonth,
+      monthForecastChart,
+      weeklyCashflow,
+      platformTotals,
+      monthlyTrend,
+      recentEarnings: normalized
+        .sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime())
+        .slice(0, 8),
+    };
+  }, [earnings]);
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 text-[#2f2a25]">
-        <form onSubmit={handleLogin} className="glass-tile w-full max-w-md p-8">
-          <h1 className="text-2xl font-semibold text-[#2f2a25] mb-6 uppercase tracking-tight">Freelancer OS Login</h1>
-          <input 
-            type="password" 
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <form onSubmit={handleLogin} className="glass-tile-dark w-full max-w-md p-8 border border-[#34517a]">
+          <h1 className="text-2xl font-semibold mb-6 uppercase tracking-tight">Freelancer Command Center</h1>
+          <p className="text-graphite-faint text-xs mb-4 uppercase tracking-[0.2em]">Admin access</p>
+          <input
+            type="password"
             placeholder="Admin Password"
-            className="w-full p-3 rounded-xl bg-[#f7f2ea] border border-[#e6d8c6] text-[#2f2a25] mb-4 outline-none focus:border-[#9a7a55] focus:bg-white transition-all"
+            className="w-full p-3 rounded-xl bg-[#0f1825] border border-[#2a3f5d] mb-4 outline-none focus:border-[#5ec7b7]"
             onChange={(e) => setPassword(e.target.value)}
           />
-          <button className="w-full bg-[#8b6d4b] hover:bg-[#9a7a55] text-white py-3 rounded-xl font-semibold transition-all shadow-xl shadow-black/20">Unlock</button>
+          <button className="w-full bg-[#5ec7b7] hover:bg-[#7be0cc] text-[#041a1a] py-3 rounded-xl font-semibold transition-all">
+            Unlock
+          </button>
         </form>
       </div>
     );
   }
 
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const dayOfMonth = now.getDate();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const monthLabel = now.toLocaleDateString('en-US', { month: 'short' });
-  const asOfLabel = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-  const dailyTotals = Array.from({ length: daysInMonth }, () => 0);
-  earnings.forEach((entry) => {
-    if (!entry?.date) return;
-    const parsed = new Date(entry.date);
-    if (Number.isNaN(parsed.getTime())) return;
-    if (parsed.getFullYear() !== year || parsed.getMonth() !== month) return;
-
-    const amount = typeof entry.amount === 'number' ? entry.amount : parseFloat(entry.amount);
-    if (!Number.isFinite(amount)) return;
-    dailyTotals[parsed.getDate() - 1] += amount;
+  const asOfLabel = new Date().toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
   });
 
-  const cumulative = [];
-  let running = 0;
-  for (let i = 0; i < dayOfMonth; i += 1) {
-    running += dailyTotals[i];
-    cumulative.push(running);
-  }
-
-  const avgDaily = dayOfMonth > 0 ? running / dayOfMonth : 0;
-  const forecastSeries = [];
-  for (let i = 0; i < daysInMonth; i += 1) {
-    if (i < dayOfMonth) {
-      forecastSeries.push(cumulative[i] ?? running);
-    } else {
-      forecastSeries.push(running + avgDaily * (i + 1 - dayOfMonth));
-    }
-  }
-
-  const earnedToDate = cumulative[cumulative.length - 1] || 0;
-  const forecastTotal = forecastSeries[forecastSeries.length - 1] || 0;
-  const hasEarnings = earnedToDate > 0;
-
-  const formatUsd = (value) =>
-    new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(value);
-
-  const chartHeight = 60;
-  const chartWidth = 100;
-  const denominator = Math.max(daysInMonth - 1, 1);
-  const maxValue = Math.max(...forecastSeries, 1);
-
-  const toPoints = (series) =>
-    series.map((value, index) => ({
-      x: (index / denominator) * chartWidth,
-      y: chartHeight - (value / maxValue) * chartHeight,
-    }));
-
-  const buildLine = (points) => {
-    if (!points.length) return "";
-    return `M ${points[0].x} ${points[0].y} ` + points.slice(1).map((p) => `L ${p.x} ${p.y}`).join(" ");
-  };
-
-  const actualPoints = toPoints(cumulative);
-  const forecastPoints = toPoints(forecastSeries);
-  const actualLine = buildLine(actualPoints);
-  const forecastLine = buildLine(forecastPoints);
-  const actualArea =
-    actualPoints.length > 0
-      ? `${actualLine} L ${actualPoints[actualPoints.length - 1].x} ${chartHeight} L 0 ${chartHeight} Z`
-      : "";
-
   return (
-    <div className="min-h-screen text-[#2f2a25] p-8">
-      <div className="max-w-7xl mx-auto">
-        
-        {/* THE HEADER AREA */}
-        <div className="flex items-center justify-between mb-12">
+    <div className="min-h-screen p-6 md:p-8 text-white">
+      <div className="max-w-7xl mx-auto space-y-8">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold text-[#2f2a25] uppercase tracking-tight">Command <span className="text-accent">Center</span></h1>
-            <p className="text-graphite-faint text-[10px] font-medium uppercase tracking-[0.4em] mt-2">Operations Overview</p>
+            <h1 className="text-3xl font-semibold uppercase tracking-tight">
+              Earnings <span className="text-accent">Intelligence</span>
+            </h1>
+            <p className="text-graphite-faint text-[11px] uppercase tracking-[0.25em] mt-2">
+              Forecast modeling and cashflow analytics // as of {asOfLabel}
+            </p>
           </div>
-          
-          <div className="flex items-center gap-4">
-            <AddEarningForm /> 
-            <div className="bg-[#f7f2ea] px-4 py-2 rounded-full border border-[#e6d8c6] text-xs font-mono text-graphite-faint">
-              {candidates.length} APPLICANTS DETECTED
+
+          <div className="flex items-center gap-3">
+            <AddEarningForm />
+            <div className="glass-tile px-4 py-2 text-xs uppercase tracking-widest text-graphite-faint border border-[#2f4b70]">
+              {clientsLoading ? '--' : clients.length} clients tracked
             </div>
           </div>
         </div>
 
-        <div className="mb-10 glass-tile-dark p-6 md:p-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <div className="text-[10px] text-graphite-faint uppercase font-medium tracking-widest">Revenue Overview</div>
-              <div className="text-lg font-semibold">Earnings to date and forecast</div>
-            </div>
-            <div className="text-xs text-graphite-faint">As of {asOfLabel}</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="glass-tile p-5 border border-[#2f4b70]">
+            <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Lifetime paid</p>
+            <p className="text-2xl font-semibold mt-2">{earningsLoading ? '--' : usd(analytics.paidTotal)}</p>
           </div>
+          <div className="glass-tile p-5 border border-[#2f4b70]">
+            <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Pending pipeline</p>
+            <p className="text-2xl font-semibold mt-2">{earningsLoading ? '--' : usd(analytics.pendingTotal)}</p>
+          </div>
+          <div className="glass-tile p-5 border border-[#2f4b70]">
+            <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Month paid</p>
+            <p className="text-2xl font-semibold mt-2">{earningsLoading ? '--' : usd(analytics.monthlyPaid)}</p>
+          </div>
+          <div className="glass-tile p-5 border border-[#2f4b70]">
+            <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Forecast end of month</p>
+            <p className="text-2xl font-semibold mt-2 text-accent">
+              {earningsLoading ? '--' : usd(analytics.forecastEndOfMonth)}
+            </p>
+          </div>
+        </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-end">
-            <div className="lg:col-span-2">
-              <div className="glass-tile p-4">
-                <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-28">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <div className="xl:col-span-2 glass-tile-dark p-5 border border-[#2f4b70]">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-graphite-faint">Current month forecast</p>
+              <p className="text-sm text-graphite-faint">MTD {usd(analytics.earnedToDate)}</p>
+            </div>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={analytics.monthForecastChart}>
                   <defs>
-                    <linearGradient id="actualFill" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stopColor="rgba(139,109,75,0.45)" />
-                      <stop offset="100%" stopColor="rgba(139,109,75,0)" />
+                    <linearGradient id="forecastFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#5ec7b7" stopOpacity={0.45} />
+                      <stop offset="95%" stopColor="#5ec7b7" stopOpacity={0.05} />
                     </linearGradient>
                   </defs>
-                  <path d={actualArea} fill="url(#actualFill)" />
-                  <path d={actualLine} fill="none" stroke="rgba(139,109,75,0.9)" strokeWidth="2" />
-                  <path d={forecastLine} fill="none" stroke="rgba(120,106,90,0.6)" strokeWidth="2" strokeDasharray="4 4" />
-                </svg>
-                <div className="flex items-center justify-between text-[10px] text-graphite-faint mt-2 uppercase font-medium tracking-widest">
-                  <span>{monthLabel} 1</span>
-                  <span>{monthLabel} {daysInMonth}</span>
-                </div>
-                {!earningsLoading && !hasEarnings && (
-                  <div className="text-xs text-graphite-faint mt-3">No earnings logged for this month yet.</div>
-                )}
-              </div>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(136,164,204,0.18)" />
+                  <XAxis dataKey="day" stroke="#9db2d5" tick={{ fill: '#9db2d5', fontSize: 11 }} />
+                  <YAxis stroke="#9db2d5" tick={{ fill: '#9db2d5', fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+                  <Tooltip
+                    contentStyle={{ background: '#0f1726', border: '1px solid #2f4b70', borderRadius: 12 }}
+                    formatter={(v) => usd(v)}
+                  />
+                  <Legend />
+                  <Area type="monotone" dataKey="actual" name="Actual" stroke="#7fb5ff" fill="url(#forecastFill)" strokeWidth={2} />
+                  <Line type="monotone" dataKey="forecast" name="Forecast" stroke="#5ec7b7" strokeWidth={2} dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
+          </div>
 
-            <div className="space-y-4">
-              <div className="glass-tile p-4">
-                <div className="text-[10px] text-graphite-faint uppercase font-medium tracking-widest">Earnings to date</div>
-                <div className="text-2xl font-semibold mt-1">
-                  {earningsLoading ? "--" : formatUsd(earnedToDate)}
-                </div>
-                <div className="text-[10px] text-graphite-faint uppercase font-medium tracking-widest mt-1">
-                  Month to date
-                </div>
-              </div>
-              <div className="glass-tile p-4">
-                <div className="text-[10px] text-graphite-faint uppercase font-medium tracking-widest">Potential (forecast)</div>
-                <div className="text-2xl font-semibold text-[#8b6d4b] mt-1">
-                  {earningsLoading ? "--" : formatUsd(forecastTotal)}
-                </div>
-                <div className="text-[10px] text-graphite-faint uppercase font-medium tracking-widest mt-1">
-                  Projected end of {monthLabel}
-                </div>
-              </div>
+          <div className="glass-tile-dark p-5 border border-[#2f4b70]">
+            <p className="text-xs uppercase tracking-[0.2em] text-graphite-faint mb-4">Revenue by platform</p>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={analytics.platformTotals}
+                    dataKey="amount"
+                    nameKey="platform"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={95}
+                    innerRadius={55}
+                    label={({ platform }) => platform}
+                  >
+                    {analytics.platformTotals.map((entry, index) => (
+                      <Cell key={entry.platform} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ background: '#0f1726', border: '1px solid #2f4b70', borderRadius: 12 }}
+                    formatter={(v) => usd(v)}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>
 
-        {/* THE CARDS AREA */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {candidates.map((person) => (
-            <div key={person.id} className="glass-tile p-6">
-              <h2 className="text-xl font-semibold">{person.name}</h2>
-              <p className="text-graphite-muted text-sm mb-4">{person.email}</p>
-              <div className="text-[10px] text-graphite-faint uppercase font-medium mb-1 tracking-widest">Experience</div>
-              <p className="text-sm text-graphite-muted mb-6">{person.experience}</p>
-              <a href={person.resumeUrl} target="_blank" className="block text-center bg-[#f7f2ea] hover:bg-[#efe7db] border border-[#e6d8c6] py-2 rounded-xl text-[10px] font-semibold uppercase tracking-[0.2em] transition-all">View Application</a>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <div className="glass-tile p-5 border border-[#2f4b70]">
+            <p className="text-xs uppercase tracking-[0.2em] text-graphite-faint mb-4">Weekly cashflow (paid vs pending)</p>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analytics.weeklyCashflow}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(136,164,204,0.18)" />
+                  <XAxis dataKey="week" stroke="#9db2d5" tick={{ fill: '#9db2d5', fontSize: 11 }} />
+                  <YAxis stroke="#9db2d5" tick={{ fill: '#9db2d5', fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+                  <Tooltip
+                    contentStyle={{ background: '#0f1726', border: '1px solid #2f4b70', borderRadius: 12 }}
+                    formatter={(v) => usd(v)}
+                  />
+                  <Legend />
+                  <Bar dataKey="paid" fill="#5ec7b7" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="pending" fill="#7a8fff" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-          ))}
+          </div>
+
+          <div className="glass-tile p-5 border border-[#2f4b70]">
+            <p className="text-xs uppercase tracking-[0.2em] text-graphite-faint mb-4">Monthly trend</p>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={analytics.monthlyTrend}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(136,164,204,0.18)" />
+                  <XAxis dataKey="month" stroke="#9db2d5" tick={{ fill: '#9db2d5', fontSize: 11 }} />
+                  <YAxis stroke="#9db2d5" tick={{ fill: '#9db2d5', fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+                  <Tooltip
+                    contentStyle={{ background: '#0f1726', border: '1px solid #2f4b70', borderRadius: 12 }}
+                    formatter={(v) => usd(v)}
+                  />
+                  <Line type="monotone" dataKey="total" stroke="#7fb5ff" strokeWidth={3} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
 
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <div className="glass-tile p-5 border border-[#2f4b70]">
+            <p className="text-xs uppercase tracking-[0.2em] text-graphite-faint mb-4">Recent earnings events</p>
+            <div className="space-y-3 max-h-[360px] overflow-auto pr-1">
+              {analytics.recentEarnings.length === 0 && (
+                <p className="text-sm text-graphite-faint">No earnings logged yet.</p>
+              )}
+
+              {analytics.recentEarnings.map((entry) => (
+                <div key={entry.id} className="rounded-xl border border-[#2a3f5d] bg-[#0d1522] p-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium">{entry.platform}</p>
+                    <p className="text-xs text-graphite-faint">
+                      {entry.project || 'Unmapped project'} · {new Date(entry.date).toLocaleDateString('en-US')} · {entry.status || 'Pending'}
+                    </p>
+                  </div>
+                  <p className="font-semibold text-accent">{usd(entry.amount)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="glass-tile p-5 border border-[#2f4b70]">
+            <p className="text-xs uppercase tracking-[0.2em] text-graphite-faint mb-4">Client tracker</p>
+            <div className="space-y-3 max-h-[360px] overflow-auto pr-1">
+              {!clientsLoading && clients.length === 0 && (
+                <p className="text-sm text-graphite-faint">No client records found.</p>
+              )}
+
+              {clients.map((client) => (
+                <div key={client.id} className="rounded-xl border border-[#2a3f5d] bg-[#0d1522] p-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium">{client.name}</p>
+                    <p className="text-xs text-graphite-faint">{client.role} · {client.email}</p>
+                    <p className="text-xs text-graphite-faint">Experience: {client.experience}</p>
+                  </div>
+                  <span className="text-[10px] uppercase tracking-widest px-2 py-1 rounded-full bg-[#17314f] text-[#9ec5ff] border border-[#365a84]">
+                    {client.status || 'Unknown'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

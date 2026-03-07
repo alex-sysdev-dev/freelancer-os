@@ -4,66 +4,49 @@ import Link from 'next/link';
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6 text-[#2f2a25]">
-      
-      {/* Header Branding */}
+    <main className="flex min-h-screen flex-col items-center justify-center p-6 text-white">
       <div className="text-center mb-12">
-        <h1 className="text-4xl font-semibold tracking-tight text-[#2f2a25] uppercase">
-          Freelancer<span className="text-accent">OS</span>
+        <h1 className="text-4xl font-semibold tracking-tight uppercase">
+          Freelancer <span className="text-accent">Command Center</span>
         </h1>
-        <p className="text-graphite-faint text-xs font-medium uppercase tracking-[0.3em] mt-2">Access Portal</p>
+        <p className="text-graphite-faint text-xs font-medium uppercase tracking-[0.3em] mt-2">Operations portal</p>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-8 w-full max-w-5xl">
-        
-        {/* Card 1: Candidate Portal */}
-        <div className="flex-1 p-8 glass-tile flex flex-col justify-between relative overflow-hidden">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl">
+        <div className="glass-tile p-8 flex flex-col justify-between border border-[#2f4b70]">
           <div>
-            <div className="mb-6">
-              <span className="text-[10px] font-semibold bg-[#8b6d4b] text-white px-3 py-1 rounded-full uppercase tracking-widest">Guest</span>
-              <h2 className="text-2xl font-semibold text-[#2f2a25] mt-4">Candidate Portal</h2>
-              <p className="text-graphite-muted text-sm mt-2">Check your application status and update your profile.</p>
-            </div>
-
-            <div className="space-y-3">
-              <button className="w-full flex items-center justify-center gap-3 bg-[#f7f2ea] text-[#2f2a25] font-medium py-3 rounded-xl hover:bg-[#efe7db] transition-all border border-[#e6d8c6]">
-                Google
-              </button>
-              <button className="w-full flex items-center justify-center gap-3 bg-[#f7f2ea] text-[#2f2a25] font-medium py-3 rounded-xl hover:bg-[#efe7db] transition-all border border-[#e6d8c6]">
-                LinkedIn
-              </button>
-            </div>
+            <span className="text-[10px] font-semibold bg-[#17314f] text-[#9ec5ff] px-3 py-1 rounded-full uppercase tracking-widest">Client CRM</span>
+            <h2 className="text-2xl font-semibold mt-4">Add or Update Clients</h2>
+            <p className="text-graphite-muted text-sm mt-2">Track active clients, engagement status, and key contact details in Airtable.</p>
           </div>
-          <p className="text-[10px] text-center text-graphite-faint mt-6 uppercase font-medium">Registration Required</p>
+
+          <Link
+            href="/login/candidate"
+            className="mt-8 text-center w-full bg-[#1b2f4a] text-white font-semibold py-3 rounded-xl hover:bg-[#274366] transition-all border border-[#365a84]"
+          >
+            Open Client Intake
+          </Link>
         </div>
 
-        {/* Card 2: Admin/Command Portal */}
-        <div className="flex-1 p-8 glass-tile-dark flex flex-col justify-between relative overflow-hidden">
+        <div className="glass-tile-dark p-8 flex flex-col justify-between border border-[#2f4b70]">
           <div>
-            <div className="mb-6">
-              <span className="text-[10px] font-semibold bg-[#2f2a25] text-white px-3 py-1 rounded-full uppercase tracking-widest">Internal</span>
-              <h2 className="text-2xl font-semibold text-[#2f2a25] mt-4">Command Center</h2>
-              <p className="text-graphite-muted text-sm mt-2">Full access to revenue, Analytics, and Data management.</p>
-            </div>
-
-            <div className="space-y-3">
-              <button className="w-full flex items-center justify-center gap-3 bg-[#2f2a25] text-white font-semibold py-3 rounded-xl hover:bg-[#3a332c] transition-all shadow-lg shadow-black/10">
-                GitHub Admin
-              </button>
-              <button className="w-full flex items-center justify-center gap-3 bg-[#f1e9dc] text-[#2f2a25] font-semibold py-3 rounded-xl hover:bg-[#e9dece] transition-all border border-[#e3d6c4]">
-                Apple ID
-              </button>
-            </div>
+            <span className="text-[10px] font-semibold bg-[#12322e] text-[#9ce6d9] px-3 py-1 rounded-full uppercase tracking-widest">Earnings Intelligence</span>
+            <h2 className="text-2xl font-semibold mt-4">Forecast + Revenue Analytics</h2>
+            <p className="text-graphite-muted text-sm mt-2">Monitor weekly cashflow, platform performance, and month-end forecast in one dashboard.</p>
           </div>
-          <p className="text-[10px] text-center text-graphite-faint mt-6 uppercase font-medium">Authorized Personnel Only</p>
-        </div>
 
+          <Link
+            href="/dashboard"
+            className="mt-8 text-center w-full bg-[#43bda8] text-[#041a1a] font-semibold py-3 rounded-xl hover:bg-[#59d4bc] transition-all"
+          >
+            Launch Dashboard
+          </Link>
+        </div>
       </div>
 
-      {/* Footer Link */}
       <div className="mt-12">
-        <Link href="/" className="text-[10px] text-graphite-faint hover:text-[#2f2a25] transition-colors uppercase font-semibold tracking-widest">
-          ← Cancel Authorization
+        <Link href="/" className="text-[10px] text-graphite-faint hover:text-white transition-colors uppercase font-semibold tracking-widest">
+          Back to Home
         </Link>
       </div>
     </main>
