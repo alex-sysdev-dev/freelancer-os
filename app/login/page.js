@@ -9,30 +9,15 @@ export default function LoginPage() {
         <h1 className="text-4xl font-semibold tracking-tight uppercase">
           Freelancer <span className="text-accent">Command Center</span>
         </h1>
-        <p className="text-graphite-faint text-xs font-medium uppercase tracking-[0.3em] mt-2">Operations portal</p>
+        <p className="text-graphite-faint text-xs font-medium uppercase tracking-[0.3em] mt-2">Finance portal</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl">
-        <div className="glass-tile p-8 flex flex-col justify-between border border-[#2f4b70]">
-          <div>
-            <span className="text-[10px] font-semibold bg-[#17314f] text-[#9ec5ff] px-3 py-1 rounded-full uppercase tracking-widest">Client CRM</span>
-            <h2 className="text-2xl font-semibold mt-4">Add or Update Clients</h2>
-            <p className="text-graphite-muted text-sm mt-2">Track active clients, engagement status, and key contact details in Airtable.</p>
-          </div>
-
-          <Link
-            href="/login/candidate"
-            className="mt-8 text-center w-full bg-[#1b2f4a] text-white font-semibold py-3 rounded-xl hover:bg-[#274366] transition-all border border-[#365a84]"
-          >
-            Open Client Intake
-          </Link>
-        </div>
-
+      <div className="w-full max-w-3xl">
         <div className="glass-tile-dark p-8 flex flex-col justify-between border border-[#2f4b70]">
           <div>
-            <span className="text-[10px] font-semibold bg-[#12322e] text-[#9ce6d9] px-3 py-1 rounded-full uppercase tracking-widest">Earnings Intelligence</span>
-            <h2 className="text-2xl font-semibold mt-4">Forecast + Revenue Analytics</h2>
-            <p className="text-graphite-muted text-sm mt-2">Monitor weekly cashflow, platform performance, and month-end forecast in one dashboard.</p>
+            <span className="text-[10px] font-semibold bg-[#12322e] text-[#9ce6d9] px-3 py-1 rounded-full uppercase tracking-widest">Finance Stack</span>
+            <h2 className="text-2xl font-semibold mt-4">Earnings + Savings + Investments</h2>
+            <p className="text-graphite-muted text-sm mt-2">Track weekly earnings, transfer flows, and account balances in one command center.</p>
           </div>
 
           <Link

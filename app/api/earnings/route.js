@@ -1,16 +1,7 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { createRecord, fetchAllRecords } from '@/lib/airtable/client';
-import {
-  getAirtableSchema,
-  getPreferredFieldName,
-} from '@/lib/airtable/schema';
-import {
-  buildRateLookup,
-  mapEarningRecord,
-  parseProjectFromTags,
-  sortByDateAsc,
-  toFiniteNumber,
-} from '@/lib/services/AirtableService';
+import { getAirtableSchema, getPreferredFieldName } from '@/lib/airtable/schema';
+import { mapEarningRecord, sortByDateAsc, toFiniteNumber } from '@/lib/services/AirtableService';
 
 function errorResponse(status, code, message, details = {}) {
   return NextResponse.json({ error: message, code, details }, { status });
@@ -18,66 +9,23 @@ function errorResponse(status, code, message, details = {}) {
 
 function uniqueValues(values) {
   const seen = new Set();
-  const result = [];
+  const output = [];
+
   for (const value of values) {
-    if (value === undefined) continue;
+    if (value === undefined || value === null || value === '') continue;
+
     const key = JSON.stringify(value);
     if (seen.has(key)) continue;
+
     seen.add(key);
-    result.push(value);
+    output.push(value);
   }
-  return result;
+
+  return output;
 }
 
-function normalizeTagText(value) {
-  if (typeof value !== 'string') return '';
-  return value.trim();
-}
-
-function buildTagVariants(rawTags) {
-  const tagText = normalizeTagText(rawTags);
-  if (!tagText) return [];
-
-  const splitTags = tagText
-    .split(',')
-    .map((tag) => tag.trim())
-    .filter(Boolean);
-
-  return uniqueValues([tagText, splitTags.length ? splitTags : undefined]);
-}
-
-async function createEarningWithFallbacks({
-  tableName,
-  fieldsByLogicalName,
-  statusValue,
-}) {
+async function createWithFieldFallbacks({ tableName, attempts }) {
   const errors = [];
-
-  const { platformField, hoursField, dateField, tagsField, statusField } = fieldsByLogicalName;
-  const statusCandidates = uniqueValues([statusValue, undefined]);
-
-  const attempts = [];
-  for (const hours of fieldsByLogicalName.hoursCandidates) {
-    for (const tags of fieldsByLogicalName.tagCandidates) {
-      for (const status of statusCandidates) {
-        const fields = {
-          [platformField]: fieldsByLogicalName.platformValue,
-          [hoursField]: hours,
-          [dateField]: fieldsByLogicalName.dateValue,
-        };
-
-        if (tags !== undefined && tags !== '') {
-          fields[tagsField] = tags;
-        }
-
-        if (status !== undefined && status !== '' && statusField) {
-          fields[statusField] = status;
-        }
-
-        attempts.push(fields);
-      }
-    }
-  }
 
   for (const fields of attempts) {
     const result = await createRecord({
@@ -86,49 +34,38 @@ async function createEarningWithFallbacks({
       typecast: true,
     });
 
-    if (result.ok) {
-      return { ok: true, result };
-    }
-
+    if (result.ok) return result;
     errors.push(result.error?.message || 'Unknown Airtable create failure');
   }
 
-  return { ok: false, errors };
+  return {
+    ok: false,
+    status: 500,
+    error: {
+      code: 'EARNINGS_CREATE_FAILED',
+      message: errors.join(' | '),
+    },
+  };
 }
 
 export async function GET() {
   const schema = getAirtableSchema();
-  const earningsResult = await fetchAllRecords({
-    tableName: schema.tables.earnings,
-  });
+  const response = await fetchAllRecords({ tableName: schema.tables.earnings });
 
-  if (!earningsResult.ok) {
+  if (!response.ok) {
     return errorResponse(
-      earningsResult.status || 500,
-      earningsResult.error?.code || 'EARNINGS_TABLE_READ_FAILED',
-      earningsResult.error?.message || 'Unable to read earnings table',
+      response.status || 500,
+      response.error?.code || 'EARNINGS_TABLE_READ_FAILED',
+      response.error?.message || 'Unable to read earnings table',
       { table: schema.tables.earnings }
     );
   }
 
-  const rateLookupResult = await buildRateLookup(schema);
-
-  const normalized = earningsResult.data.records.map((record) =>
-    mapEarningRecord(record, schema.entities.earnings.fields, rateLookupResult.lookup)
+  const mapped = response.data.records.map((record) =>
+    mapEarningRecord(record, schema.entities.earnings.fields)
   );
 
-  const sorted = sortByDateAsc(normalized);
-
-  // Keep the route response array-shaped so existing UI consumers do not break.
-  return NextResponse.json(
-    sorted.map((entry) => {
-      if (rateLookupResult.issues.length === 0) return entry;
-      return {
-        ...entry,
-        lookupWarning: rateLookupResult.issues,
-      };
-    })
-  );
+  return NextResponse.json(sortByDateAsc(mapped));
 }
 
 export async function POST(req) {
@@ -139,85 +76,68 @@ export async function POST(req) {
     return errorResponse(400, 'INVALID_JSON', 'Request body must be valid JSON');
   }
 
-  const platform = payload.platform || payload.source;
-  const date = payload.date;
-  const hoursWorked = toFiniteNumber(payload.hoursWorked ?? payload.amount);
-  const providedProject = typeof payload.project === 'string' ? payload.project.trim() : '';
-  const providedTags = typeof payload.tags === 'string' ? payload.tags.trim() : '';
+  const platform = typeof payload?.platform === 'string' ? payload.platform.trim() : '';
+  const project = typeof payload?.project === 'string' ? payload.project.trim() : '';
+  const date = payload?.date;
+  const hoursWorked = toFiniteNumber(payload?.hoursWorked);
+  const ratePerHour = toFiniteNumber(payload?.ratePerHour);
 
-  if (!platform || !date) {
+  if (!platform || !project || !date) {
     return errorResponse(
       400,
       'MISSING_REQUIRED_FIELDS',
-      'platform/source and date are required'
+      'platform, project, and date are required'
     );
   }
 
-  if (!Number.isFinite(hoursWorked)) {
+  if (!Number.isFinite(hoursWorked) || !Number.isFinite(ratePerHour)) {
     return errorResponse(
       400,
-      'INVALID_HOURS',
-      'hoursWorked (or amount) must be a valid number'
-    );
-  }
-
-  const tagText = providedTags || providedProject;
-  const tagVariants = buildTagVariants(tagText);
-
-  if (tagText && !parseProjectFromTags(tagText)) {
-    return errorResponse(
-      400,
-      'INVALID_TAG_FORMAT',
-      'Tags must include a project value'
+      'INVALID_NUMERIC_FIELDS',
+      'hoursWorked and ratePerHour must be valid numbers'
     );
   }
 
   const schema = getAirtableSchema();
+  const fieldName = (logicalField) => getPreferredFieldName(schema, 'earnings', logicalField);
+
   const prefersDuration = process.env.AIRTABLE_HOURS_IS_DURATION !== 'false';
   const hoursAsSeconds = Math.round(hoursWorked * 3600);
   const hoursCandidates = prefersDuration
     ? uniqueValues([hoursAsSeconds, hoursWorked])
     : uniqueValues([hoursWorked, hoursAsSeconds]);
 
-  const statusValue = payload.status || 'Paid';
-  const created = await createEarningWithFallbacks({
+  const attempts = hoursCandidates.map((hoursValue) => ({
+    [fieldName('date')]: date,
+    [fieldName('platform')]: platform,
+    [fieldName('project')]: project,
+    [fieldName('hoursWorked')]: hoursValue,
+    [fieldName('ratePerHour')]: ratePerHour,
+  }));
+
+  const created = await createWithFieldFallbacks({
     tableName: schema.tables.earnings,
-    fieldsByLogicalName: {
-      platformField: getPreferredFieldName(schema, 'earnings', 'platform'),
-      hoursField: getPreferredFieldName(schema, 'earnings', 'hoursWorked'),
-      dateField: getPreferredFieldName(schema, 'earnings', 'date'),
-      tagsField: getPreferredFieldName(schema, 'earnings', 'tags'),
-      statusField: getPreferredFieldName(schema, 'earnings', 'status'),
-      platformValue: platform,
-      dateValue: date,
-      hoursCandidates,
-      tagCandidates: uniqueValues([...tagVariants, undefined]),
-    },
-    statusValue,
+    attempts,
   });
 
   if (!created.ok) {
     return errorResponse(
-      500,
-      'EARNINGS_CREATE_FAILED',
-      'Failed to create earnings entry',
+      created.status || 500,
+      created.error?.code || 'EARNINGS_CREATE_FAILED',
+      created.error?.message || 'Failed to create earnings entry',
       {
         table: schema.tables.earnings,
-        attempts: created.errors,
       }
     );
   }
 
   return NextResponse.json({
-    id: created.result.data?.id,
-    source: platform,
-    amount: hoursWorked,
+    id: created.data?.id,
     date,
     platform,
-    project: parseProjectFromTags(tagText),
+    project,
     hoursWorked,
-    ratePerHour: null,
-    tags: tagText || '',
-    status: statusValue,
+    ratePerHour,
+    amount: Math.round(hoursWorked * ratePerHour * 100) / 100,
   });
 }

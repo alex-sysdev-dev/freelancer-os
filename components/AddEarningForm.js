@@ -6,11 +6,11 @@ const INITIAL_STATE = {
   platform: '',
   project: '',
   hoursWorked: '',
+  ratePerHour: '',
   date: new Date().toISOString().split('T')[0],
-  status: 'Paid',
 };
 
-export default function AddEarningForm() {
+export default function AddEarningForm({ onSaved }) {
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState(INITIAL_STATE);
   const [isSaving, setIsSaving] = useState(false);
@@ -28,8 +28,8 @@ export default function AddEarningForm() {
         platform: formData.platform,
         project: formData.project,
         hoursWorked: formData.hoursWorked,
+        ratePerHour: formData.ratePerHour,
         date: formData.date,
-        status: formData.status,
       };
 
       const res = await fetch('/api/earnings', {
@@ -47,7 +47,11 @@ export default function AddEarningForm() {
       alert('Earning logged successfully.');
       setIsOpen(false);
       setFormData(INITIAL_STATE);
-      window.location.reload();
+      if (typeof onSaved === 'function') {
+        onSaved();
+      } else {
+        window.location.reload();
+      }
     } catch {
       alert('Critical error connecting to API.');
     } finally {
@@ -108,29 +112,29 @@ export default function AddEarningForm() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-graphite-faint font-medium uppercase mb-1 block">Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.date}
-                    className="w-full p-2.5 rounded-lg bg-[#0f1825] border border-[#2a3f5d] text-white focus:border-[#59d4bc] outline-none transition"
-                    onChange={(e) => handleChange('date', e.target.value)}
-                  />
-                </div>
+              <div>
+                <label className="text-xs text-graphite-faint font-medium uppercase mb-1 block">Rate ($/hr)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  required
+                  value={formData.ratePerHour}
+                  className="w-full p-2.5 rounded-lg bg-[#0f1825] border border-[#2a3f5d] text-white focus:border-[#59d4bc] outline-none transition"
+                  onChange={(e) => handleChange('ratePerHour', e.target.value)}
+                />
+              </div>
 
-                <div>
-                  <label className="text-xs text-graphite-faint font-medium uppercase mb-1 block">Status</label>
-                  <select
-                    value={formData.status}
-                    className="w-full p-2.5 rounded-lg bg-[#0f1825] border border-[#2a3f5d] text-white focus:border-[#59d4bc] outline-none transition"
-                    onChange={(e) => handleChange('status', e.target.value)}
-                  >
-                    <option value="Pending">Pending</option>
-                    <option value="Paid">Paid</option>
-                  </select>
-                </div>
+              <div>
+                <label className="text-xs text-graphite-faint font-medium uppercase mb-1 block">Date</label>
+                <input
+                  type="date"
+                  required
+                  value={formData.date}
+                  className="w-full p-2.5 rounded-lg bg-[#0f1825] border border-[#2a3f5d] text-white focus:border-[#59d4bc] outline-none transition"
+                  onChange={(e) => handleChange('date', e.target.value)}
+                />
               </div>
 
               <div className="flex gap-3 mt-6">

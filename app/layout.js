@@ -9,7 +9,12 @@ const jakartaSans = Plus_Jakarta_Sans({
 
 export const metadata = {
   title: "Freelancer Command Center",
-  description: "Track clients, earnings, and forecasts in one place",
+  description: "Track earnings, transfers, and account balances in one place",
+  icons: {
+    icon: "/logos/favicon.svg",
+    shortcut: "/logos/favicon.svg",
+    apple: "/logos/favicon.svg",
+  },
 };
 
 export default function RootLayout({ children }) {

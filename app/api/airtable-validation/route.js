@@ -1,10 +1,11 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { fetchAllRecords } from '@/lib/airtable/client';
-import { getAirtableSchema, pickRecordValue } from '@/lib/airtable/schema';
+import { getAirtableSchema } from '@/lib/airtable/schema';
 import {
-  buildRateLookup,
+  mapAccountRecord,
   mapEarningRecord,
-  parseProjectFromTags,
+  mapTransferRecord,
+  sortByDateDesc,
 } from '@/lib/services/AirtableService';
 
 function errorResponse(status, code, message, details = {}) {
@@ -14,9 +15,10 @@ function errorResponse(status, code, message, details = {}) {
 export async function GET() {
   const schema = getAirtableSchema();
 
-  const [earningsResponse, applicantsResponse] = await Promise.all([
+  const [earningsResponse, accountsResponse, transfersResponse] = await Promise.all([
     fetchAllRecords({ tableName: schema.tables.earnings }),
-    fetchAllRecords({ tableName: schema.tables.applicants }),
+    fetchAllRecords({ tableName: schema.tables.accounts }),
+    fetchAllRecords({ tableName: schema.tables.transfers }),
   ]);
 
   if (!earningsResponse.ok) {
@@ -28,80 +30,65 @@ export async function GET() {
     );
   }
 
-  if (!applicantsResponse.ok) {
+  if (!accountsResponse.ok) {
     return errorResponse(
-      applicantsResponse.status || 500,
-      applicantsResponse.error?.code || 'APPLICANTS_VALIDATION_READ_FAILED',
-      applicantsResponse.error?.message || 'Unable to read applicants for validation',
-      { table: schema.tables.applicants }
+      accountsResponse.status || 500,
+      accountsResponse.error?.code || 'ACCOUNTS_VALIDATION_READ_FAILED',
+      accountsResponse.error?.message || 'Unable to read accounts for validation',
+      { table: schema.tables.accounts }
     );
   }
 
-  const lookupResult = await buildRateLookup(schema);
-  const earningsFieldMap = schema.entities.earnings.fields;
-
-  const missingProjectTags = [];
-  const missingRates = [];
-
-  for (const record of earningsResponse.data.records) {
-    const mapped = mapEarningRecord(record, earningsFieldMap, lookupResult.lookup);
-    const parsedProject = parseProjectFromTags(mapped.tags);
-
-    if (!parsedProject) {
-      missingProjectTags.push({
-        id: mapped.id,
-        platform: mapped.platform,
-        tags: mapped.tags || '',
-      });
-      continue;
-    }
-
-    if (mapped.warning === 'missing_rate') {
-      missingRates.push({
-        id: mapped.id,
-        platform: mapped.platform,
-        project: mapped.project,
-        hoursWorked: mapped.hoursWorked,
-      });
-    }
+  if (!transfersResponse.ok) {
+    return errorResponse(
+      transfersResponse.status || 500,
+      transfersResponse.error?.code || 'TRANSFERS_VALIDATION_READ_FAILED',
+      transfersResponse.error?.message || 'Unable to read transfers for validation',
+      { table: schema.tables.transfers }
+    );
   }
 
-  const applicantFields = schema.entities.applicants.fields;
-  const applicantsMissingRequired = applicantsResponse.data.records
-    .map((record) => {
-      const fields = record?.fields || {};
-      const missing = [];
+  const earnings = earningsResponse.data.records.map((record) =>
+    mapEarningRecord(record, schema.entities.earnings.fields)
+  );
 
-      if (!pickRecordValue(fields, applicantFields.name)) missing.push('name');
-      if (!pickRecordValue(fields, applicantFields.email)) missing.push('email');
-      if (!pickRecordValue(fields, applicantFields.role)) missing.push('role');
-      if (!pickRecordValue(fields, applicantFields.experience)) missing.push('experience');
+  const accounts = accountsResponse.data.records.map((record) =>
+    mapAccountRecord(record, schema.entities.accounts.fields)
+  );
 
-      if (!missing.length) return null;
+  const transfers = sortByDateDesc(
+    transfersResponse.data.records.map((record) =>
+      mapTransferRecord(record, schema.entities.transfers.fields)
+    )
+  );
 
-      return {
-        id: record.id,
-        missing,
-      };
-    })
-    .filter(Boolean);
+  const earningsMissingRequired = earnings
+    .filter((entry) => !entry.date || !entry.platform || !entry.project)
+    .map((entry) => ({ id: entry.id, date: entry.date, platform: entry.platform, project: entry.project }));
+
+  const accountsMissingCurrentBalance = accounts
+    .filter((account) => !Number.isFinite(account.currentBalance))
+    .map((account) => ({ id: account.id, accountName: account.accountName }));
+
+  const transfersMissingAccount = transfers
+    .filter((transfer) => !transfer.account || transfer.account === 'Unknown Account')
+    .map((transfer) => ({ id: transfer.id, date: transfer.date }));
 
   return NextResponse.json({
-    schemaVersion: process.env.AIRTABLE_SCHEMA_VERSION || 'v2_current',
+    schemaVersion: process.env.AIRTABLE_SCHEMA_VERSION || 'finance_v1',
     checkedAt: new Date().toISOString(),
     summary: {
-      earningsChecked: earningsResponse.data.records.length,
-      applicantsChecked: applicantsResponse.data.records.length,
-      missingProjectTags: missingProjectTags.length,
-      missingRates: missingRates.length,
-      applicantsMissingRequired: applicantsMissingRequired.length,
-      lookupIssues: lookupResult.issues.length,
+      earningsChecked: earnings.length,
+      accountsChecked: accounts.length,
+      transfersChecked: transfers.length,
+      earningsMissingRequired: earningsMissingRequired.length,
+      accountsMissingCurrentBalance: accountsMissingCurrentBalance.length,
+      transfersMissingAccount: transfersMissingAccount.length,
     },
     details: {
-      missingProjectTags,
-      missingRates,
-      applicantsMissingRequired,
-      lookupIssues: lookupResult.issues,
+      earningsMissingRequired,
+      accountsMissingCurrentBalance,
+      transfersMissingAccount,
     },
   });
 }

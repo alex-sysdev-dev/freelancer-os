@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6FE7D2"/>
+      <stop offset="100%" stop-color="#45C7B8"/>
+    </linearGradient>
+  </defs>
+
+  <circle cx="32" cy="32" r="28" fill="#071822" stroke="#6FE7D2" stroke-width="3"/>
+
+  <polyline
+    points="16,38 28,30 36,34 48,22"
+    fill="none"
+    stroke="url(#g)"
+    stroke-width="4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <polygon points="48,22 44,24 46,19" fill="#6FE7D2"/>
+</svg>
