@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+
+const ADMIN_SESSION_KEY = 'finance_admin_unlocked';
+const PREVIEW_SESSION_KEY = 'finance_preview_unlocked';
 
 const INITIAL_STATE = {
   platform: '',
@@ -14,6 +17,14 @@ export default function AddEarningForm({ onSaved }) {
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState(INITIAL_STATE);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const isAdmin = window.sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true';
+    const isPreview = window.sessionStorage.getItem(PREVIEW_SESSION_KEY) === 'true';
+    setIsPreviewMode(!isAdmin && isPreview);
+  }, []);
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -58,6 +69,8 @@ export default function AddEarningForm({ onSaved }) {
       setIsSaving(false);
     }
   };
+
+  if (isPreviewMode) return null;
 
   return (
     <>
