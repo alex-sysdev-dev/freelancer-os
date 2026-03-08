@@ -1,4 +1,5 @@
 import { Plus_Jakarta_Sans } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const jakartaSans = Plus_Jakarta_Sans({
@@ -24,6 +25,7 @@ export default function RootLayout({ children }) {
         className={`${jakartaSans.className} antialiased graphite-bg min-h-screen font-light text-white`}
       >
         {children}
+        <Analytics />
       </body>
     </html>
   );
