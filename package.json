@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@vercel/analytics": "^1.6.1",
@@ -25,6 +27,7 @@
     "@types/react": "19.2.14",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
-    "tailwindcss": "^4.2.1"
+    "tailwindcss": "^4.2.1",
+    "vitest": "^4.1.1"
   }
 }
