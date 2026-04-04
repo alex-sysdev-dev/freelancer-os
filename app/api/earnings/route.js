@@ -78,15 +78,21 @@ export async function POST(req) {
 
   const platform = typeof payload?.platform === 'string' ? payload.platform.trim() : '';
   const project = typeof payload?.project === 'string' ? payload.project.trim() : '';
-  const date = payload?.date;
+  const date = typeof payload?.date === 'string' ? payload.date.trim() : '';
   const hoursWorked = toFiniteNumber(payload?.hoursWorked);
   const ratePerHour = toFiniteNumber(payload?.ratePerHour);
 
-  if (!platform || !project || !date) {
+  const isValidDateString = (value) => {
+    if (typeof value !== 'string' || !value.trim()) return false;
+    const parsed = new Date(value);
+    return !Number.isNaN(parsed.getTime());
+  };
+
+  if (!platform || !project || !date || !isValidDateString(date)) {
     return errorResponse(
       400,
       'MISSING_REQUIRED_FIELDS',
-      'platform, project, and date are required'
+      'platform, project, and a valid date are required'
     );
   }
 

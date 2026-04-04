@@ -11,11 +11,12 @@ import {
   YAxis,
 } from 'recharts';
 import AddTransferForm from '@/components/AddTransferForm';
+import ErrorBanner from '@/components/ErrorBanner';
 import useFinanceData from '@/lib/hooks/useFinanceData';
 import { usd } from '@/lib/finance/ui';
 
 export default function TransfersPage() {
-  const { accounts, loadFinanceData, wealthAnalytics } = useFinanceData();
+  const { error, accounts, loadFinanceData, wealthAnalytics } = useFinanceData();
 
   const totals = wealthAnalytics.recentTransfers.reduce(
     (acc, transfer) => {
@@ -29,6 +30,7 @@ export default function TransfersPage() {
 
   return (
     <div className="space-y-8">
+      <ErrorBanner message={error} />
       <div className="flex items-center gap-3">
         <AddTransferForm accounts={accounts} onSaved={loadFinanceData} />
       </div>

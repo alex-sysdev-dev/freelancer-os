@@ -84,6 +84,10 @@ AIRTABLE_HOURS_IS_DURATION=true     # true = hours stored as seconds in Airtable
 
 # Auth (client-side only — not secure for production)
 NEXT_PUBLIC_ADMIN_PASSWORD=         # Password to unlock admin mode
+
+# Claude Chat (optional)
+ANTHROPIC_API_KEY=                 # Anthropic API key for Claude chat (server-side only)
+ANTHROPIC_MODEL=claude-3-haiku-20240307  # Optional Claude model override
 ```
 
 ---

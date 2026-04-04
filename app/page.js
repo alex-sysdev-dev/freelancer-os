@@ -43,7 +43,7 @@ export default function LandingPage() {
           Track platform earnings, route money into accounts, and monitor long-horizon forecasts.
         </p>
 
-        <div className="pt-4">
+        <div className="pt-4 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Link
             href="/login"
             className="hero-tile-cta inline-flex items-center justify-center rounded-2xl bg-[#5ec7b7] px-10 py-4 font-semibold text-[#041a1a] hover:bg-[#7be0cc]"

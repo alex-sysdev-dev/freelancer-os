@@ -14,15 +14,17 @@ import {
 } from 'recharts';
 import AddEarningForm from '@/components/AddEarningForm';
 import AddTransferForm from '@/components/AddTransferForm';
+import ErrorBanner from '@/components/ErrorBanner';
 import LinkedTile from '@/components/LinkedTile';
 import useFinanceData from '@/lib/hooks/useFinanceData';
 import { CHART_COLORS, usd } from '@/lib/finance/ui';
 
 export default function DashboardOverviewPage() {
-  const { isLoading, accounts, loadFinanceData, earningsAnalytics, wealthAnalytics } = useFinanceData();
+  const { error, isLoading, accounts, loadFinanceData, earningsAnalytics, wealthAnalytics } = useFinanceData();
 
   return (
     <div className="space-y-8">
+      <ErrorBanner message={error} />
       <div className="flex items-center gap-3">
         <AddEarningForm onSaved={loadFinanceData} />
         <AddTransferForm accounts={accounts} onSaved={loadFinanceData} />
@@ -99,6 +101,20 @@ export default function DashboardOverviewPage() {
                 />
               </PieChart>
             </ResponsiveContainer>
+          </div>
+          <div className="grid grid-cols-1 gap-2 mt-4">
+            {wealthAnalytics.typeTotals.map((entry, index) => (
+              <div key={entry.type} className="flex items-center justify-between rounded-xl bg-[#0b1624] p-2 text-xs text-slate-200">
+                <span className="flex items-center gap-2">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                  />
+                  {entry.type}
+                </span>
+                <span className="font-semibold text-white">{usd(entry.total)}</span>
+              </div>
+            ))}
           </div>
         </LinkedTile>
       </div>

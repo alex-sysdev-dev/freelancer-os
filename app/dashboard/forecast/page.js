@@ -1,14 +1,16 @@
 ﻿"use client";
 
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import ErrorBanner from '@/components/ErrorBanner';
 import useFinanceData from '@/lib/hooks/useFinanceData';
 import { usd } from '@/lib/finance/ui';
 
 export default function ForecastPage() {
-  const { isLoading, earningsAnalytics } = useFinanceData();
+  const { error, isLoading, earningsAnalytics } = useFinanceData();
 
   return (
     <div className="space-y-8">
+      <ErrorBanner message={error} />
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <div className="glass-tile p-5 border border-[#2f4b70]">
           <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Latest week</p>

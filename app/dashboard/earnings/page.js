@@ -15,15 +15,17 @@ import {
   YAxis,
 } from 'recharts';
 import AddEarningForm from '@/components/AddEarningForm';
+import ErrorBanner from '@/components/ErrorBanner';
 import LinkedTile from '@/components/LinkedTile';
 import useFinanceData from '@/lib/hooks/useFinanceData';
 import { CHART_COLORS, usd } from '@/lib/finance/ui';
 
 export default function EarningsPage() {
-  const { isLoading, loadFinanceData, earningsAnalytics } = useFinanceData();
+  const { error, isLoading, loadFinanceData, earningsAnalytics } = useFinanceData();
 
   return (
     <div className="space-y-8">
+      <ErrorBanner message={error} />
       <div className="flex items-center gap-3">
         <AddEarningForm onSaved={loadFinanceData} />
       </div>

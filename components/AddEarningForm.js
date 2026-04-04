@@ -17,6 +17,7 @@ export default function AddEarningForm({ onSaved }) {
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState(INITIAL_STATE);
   const [isSaving, setIsSaving] = useState(false);
+  const [formError, setFormError] = useState(null);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   useEffect(() => {
@@ -50,12 +51,13 @@ export default function AddEarningForm({ onSaved }) {
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        alert(`Error: ${err.error || 'Failed to save earning'}`);
+        const err = await res.json().catch(() => null);
+        setFormError(err?.error || err?.message || 'Failed to save earning.');
         return;
       }
 
       alert('Earning logged successfully.');
+      setFormError(null);
       setIsOpen(false);
       setFormData(INITIAL_STATE);
       if (typeof onSaved === 'function') {
@@ -75,7 +77,10 @@ export default function AddEarningForm({ onSaved }) {
   return (
     <>
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={() => {
+          setFormError(null);
+          setIsOpen(true);
+        }}
         className="bg-[#43bda8] hover:bg-[#59d4bc] text-[#041a1a] text-xs font-semibold py-2 px-4 rounded-lg transition-all duration-200 shadow-lg shadow-[#1d6f62]/40"
       >
         + ADD EARNING
@@ -85,7 +90,11 @@ export default function AddEarningForm({ onSaved }) {
         <div className="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="glass-tile-dark p-6 w-full max-w-md text-white border border-[#2f4b70]">
             <h2 className="text-xl font-semibold mb-4">Log Earnings Event</h2>
-
+            {formError && (
+              <div className="rounded-lg border border-[#7b2b2b] bg-[#2a1015] p-3 text-sm text-[#f1c6c6] mb-3">
+                {formError}
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="text-xs text-graphite-faint font-medium uppercase mb-1 block">Platform</label>

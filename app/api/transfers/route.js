@@ -99,11 +99,11 @@ export async function POST(req) {
     return errorResponse(400, 'INVALID_JSON', 'Request body must be valid JSON');
   }
 
-  const date = payload?.date;
+  const date = typeof payload?.date === 'string' ? payload.date.trim() : '';
   const accountInput = typeof payload?.accountId === 'string'
-    ? payload.accountId
+    ? payload.accountId.trim()
     : typeof payload?.account === 'string'
-      ? payload.account
+      ? payload.account.trim()
       : '';
 
   const category = typeof payload?.category === 'string' ? payload.category.trim() : 'Deposit';
@@ -111,11 +111,27 @@ export async function POST(req) {
   const weekStartDate = typeof payload?.weekStartDate === 'string' ? payload.weekStartDate.trim() : '';
   const amount = toFiniteNumber(payload?.amount);
 
-  if (!date || !accountInput || !Number.isFinite(amount)) {
+  const isValidDateString = (value) => {
+    if (typeof value !== 'string' || !value.trim()) return false;
+    const parsed = new Date(value);
+    return !Number.isNaN(parsed.getTime());
+  };
+
+  const isValidWeekKey = (value) => typeof value === 'string' && /^\\d{4}-W\\d{2}$/i.test(value.trim());
+
+  if (!date || !isValidDateString(date) || !accountInput || !Number.isFinite(amount)) {
     return errorResponse(
       400,
       'MISSING_REQUIRED_FIELDS',
-      'date, account/accountId, and amount are required'
+      'date, account/accountId, and amount are required and must be valid'
+    );
+  }
+
+  if (weekStartDate && !isValidWeekKey(weekStartDate)) {
+    return errorResponse(
+      400,
+      'INVALID_WEEK_KEY',
+      'weekStartDate must be in the format YYYY-Www when provided'
     );
   }
 

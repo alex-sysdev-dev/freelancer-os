@@ -13,14 +13,16 @@ import {
   YAxis,
 } from 'recharts';
 import AddTransferForm from '@/components/AddTransferForm';
+import ErrorBanner from '@/components/ErrorBanner';
 import useFinanceData from '@/lib/hooks/useFinanceData';
 import { CHART_COLORS, usd } from '@/lib/finance/ui';
 
 export default function AccountsPage() {
-  const { isLoading, accounts, loadFinanceData, wealthAnalytics } = useFinanceData();
+  const { error, isLoading, accounts, loadFinanceData, wealthAnalytics } = useFinanceData();
 
   return (
     <div className="space-y-8">
+      <ErrorBanner message={error} />
       <div className="flex items-center gap-3">
         <AddTransferForm accounts={accounts} onSaved={loadFinanceData} />
       </div>
@@ -69,6 +71,20 @@ export default function AccountsPage() {
                 <Tooltip contentStyle={{ background: '#0f1726', border: '1px solid #2f4b70', borderRadius: 12 }} formatter={(v) => usd(v)} />
               </PieChart>
             </ResponsiveContainer>
+          </div>
+          <div className="grid grid-cols-1 gap-2 mt-4">
+            {wealthAnalytics.typeTotals.map((entry, index) => (
+              <div key={entry.type} className="flex items-center justify-between rounded-xl bg-[#0b1624] p-2 text-xs text-slate-200">
+                <span className="flex items-center gap-2">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                  />
+                  {entry.type}
+                </span>
+                <span className="font-semibold text-white">{usd(entry.total)}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
