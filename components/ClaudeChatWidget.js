@@ -6,7 +6,7 @@ const INITIAL_MESSAGES = [
   {
     id: 'system',
     role: 'assistant',
-    text: 'Hi! I can help explain your freelancer finance data and answer questions about earnings, accounts, and transfers.',
+    text: 'Hi! I am here to help.',
   },
 ];
 
@@ -86,7 +86,7 @@ export default function ClaudeChatWidget() {
         <div className="flex items-center justify-between border-b border-[#2f4b70] p-4">
           <div className="flex items-center gap-2">
             <div className="h-2 w-2 rounded-full bg-[#5ec7b7]"></div>
-            <span className="text-sm font-medium text-white">Claude Assistant</span>
+            <span className="text-sm font-medium text-white">FreeLance Agent</span>
           </div>
           <button
             onClick={() => setIsExpanded(false)}
