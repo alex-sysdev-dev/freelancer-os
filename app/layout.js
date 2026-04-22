@@ -1,6 +1,7 @@
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import ClaudeChatWidget from "@/components/ClaudeChatWidget";
+import SessionProviderWrapper from "@/components/saas/SessionProviderWrapper";
 import "./globals.css";
 
 const jakartaSans = Plus_Jakarta_Sans({
@@ -25,7 +26,9 @@ export default function RootLayout({ children }) {
       <body
         className={`${jakartaSans.className} antialiased graphite-bg min-h-screen font-light text-white`}
       >
-        {children}
+        <SessionProviderWrapper>
+          {children}
+        </SessionProviderWrapper>
         <ClaudeChatWidget />
         <Analytics />
       </body>
