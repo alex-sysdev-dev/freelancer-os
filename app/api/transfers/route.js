@@ -117,7 +117,7 @@ export async function POST(req) {
     return !Number.isNaN(parsed.getTime());
   };
 
-  const isValidWeekKey = (value) => typeof value === 'string' && /^\\d{4}-W\\d{2}$/i.test(value.trim());
+  const isValidWeekKey = (value) => typeof value === 'string' && /^\d{4}-W\d{2}$/i.test(value.trim());
 
   if (!date || !isValidDateString(date) || !accountInput || !Number.isFinite(amount)) {
     return errorResponse(

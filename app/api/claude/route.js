@@ -21,7 +21,6 @@ export async function POST(req) {
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  console.log("KEY:", process.env.ANTHROPIC_API_KEY)
   const model = process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
   if (!apiKey) {
     return errorResponse(
