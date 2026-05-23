@@ -1,94 +1,57 @@
-﻿import { NextResponse } from 'next/server';
-import { createRecord, fetchAllRecords } from '@/lib/airtable/client';
-import { getAirtableSchema, getPreferredFieldName, pickRecordValue } from '@/lib/airtable/schema';
-import { mapTransferRecord, sortByDateDesc, toFiniteNumber } from '@/lib/services/AirtableService';
+import { NextResponse } from 'next/server';
+import { supabaseRequest } from '@/lib/supabase/client';
+import { mapTransferRow, sortByDateDesc, toFiniteNumber } from '@/lib/services/SupabaseFinanceService';
 
 function errorResponse(status, code, message, details = {}) {
   return NextResponse.json({ error: message, code, details }, { status });
 }
 
-function buildAccountNameByIdMap(accountsRecords, schema) {
-  const map = new Map();
-  const nameCandidates = schema.entities.accounts.fields.name;
-
-  for (const record of accountsRecords || []) {
-    const fields = record?.fields || {};
-    const accountName = pickRecordValue(fields, nameCandidates);
-    if (typeof accountName === 'string' && accountName.trim()) {
-      map.set(record.id, accountName.trim());
-    }
-  }
-
-  return map;
+function isValidDateString(value) {
+  if (typeof value !== 'string' || !value.trim()) return false;
+  const parsed = new Date(value);
+  return !Number.isNaN(parsed.getTime());
 }
 
-function resolveAccountDisplayName(value, accountNameById) {
-  if (Array.isArray(value)) {
-    const resolved = value
-      .map((item) => resolveAccountDisplayName(item, accountNameById))
-      .filter(Boolean);
-    return resolved.join(', ');
-  }
-
-  if (typeof value !== 'string') return 'Unknown Account';
-
-  const trimmed = value.trim();
-  if (!trimmed) return 'Unknown Account';
-
-  const parts = trimmed.split(',').map((part) => part.trim()).filter(Boolean);
-  const resolvedParts = parts.map((part) => accountNameById.get(part) || part);
-
-  return resolvedParts.join(', ');
+function isValidWeekKey(value) {
+  return typeof value === 'string' && /^\d{4}-W\d{2}$/i.test(value.trim());
 }
 
-async function resolveAccountRecordId(accountInput, schema) {
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+async function resolveAccountId(accountInput) {
   if (!accountInput) return null;
-  if (/^rec[a-zA-Z0-9]+$/.test(accountInput)) return accountInput;
+  if (isUuid(accountInput)) return accountInput;
 
-  const accountsResponse = await fetchAllRecords({ tableName: schema.tables.accounts });
-  if (!accountsResponse.ok) return null;
+  const response = await supabaseRequest(
+    `/accounts?select=id,account_name&account_name=ilike.${encodeURIComponent(accountInput)}`
+  );
 
-  const nameCandidates = schema.entities.accounts.fields.name;
+  if (!response.ok || !Array.isArray(response.data)) return null;
+
   const lowered = accountInput.trim().toLowerCase();
-
-  const match = accountsResponse.data.records.find((record) => {
-    const value = pickRecordValue(record.fields || {}, nameCandidates);
-    return typeof value === 'string' && value.trim().toLowerCase() === lowered;
-  });
+  const match = response.data.find((account) =>
+    typeof account?.account_name === 'string' && account.account_name.trim().toLowerCase() === lowered
+  );
 
   return match?.id || null;
 }
 
 export async function GET() {
-  const schema = getAirtableSchema();
-  const [transfersResponse, accountsResponse] = await Promise.all([
-    fetchAllRecords({ tableName: schema.tables.transfers }),
-    fetchAllRecords({ tableName: schema.tables.accounts }),
-  ]);
+  const response = await supabaseRequest('/transfers?select=*,accounts(account_name)');
 
-  if (!transfersResponse.ok) {
+  if (!response.ok) {
     return errorResponse(
-      transfersResponse.status || 500,
-      transfersResponse.error?.code || 'TRANSFERS_TABLE_READ_FAILED',
-      transfersResponse.error?.message || 'Unable to read transfers table',
-      { table: schema.tables.transfers }
+      response.status || 500,
+      response.error?.code || 'TRANSFERS_TABLE_READ_FAILED',
+      response.error?.message || 'Unable to read transfers table',
+      response.error?.details ? { details: response.error.details } : {}
     );
   }
 
-  const accountNameById = accountsResponse.ok
-    ? buildAccountNameByIdMap(accountsResponse.data.records, schema)
-    : new Map();
-
-  const transfers = sortByDateDesc(
-    transfersResponse.data.records
-      .map((record) => mapTransferRecord(record, schema.entities.transfers.fields))
-      .map((transfer) => ({
-        ...transfer,
-        account: resolveAccountDisplayName(transfer.account, accountNameById),
-      }))
-  );
-
-  return NextResponse.json(transfers);
+  const rows = Array.isArray(response.data) ? response.data : [];
+  return NextResponse.json(sortByDateDesc(rows.map(mapTransferRow)));
 }
 
 export async function POST(req) {
@@ -111,14 +74,6 @@ export async function POST(req) {
   const weekStartDate = typeof payload?.weekStartDate === 'string' ? payload.weekStartDate.trim() : '';
   const amount = toFiniteNumber(payload?.amount);
 
-  const isValidDateString = (value) => {
-    if (typeof value !== 'string' || !value.trim()) return false;
-    const parsed = new Date(value);
-    return !Number.isNaN(parsed.getTime());
-  };
-
-  const isValidWeekKey = (value) => typeof value === 'string' && /^\d{4}-W\d{2}$/i.test(value.trim());
-
   if (!date || !isValidDateString(date) || !accountInput || !Number.isFinite(amount)) {
     return errorResponse(
       400,
@@ -135,31 +90,26 @@ export async function POST(req) {
     );
   }
 
-  const schema = getAirtableSchema();
-  const accountRecordId = await resolveAccountRecordId(accountInput, schema);
+  const accountId = await resolveAccountId(accountInput);
 
-  if (!accountRecordId) {
+  if (!accountId) {
     return errorResponse(400, 'ACCOUNT_NOT_FOUND', 'Unable to resolve account record');
   }
 
-  const fieldName = (logicalField) => getPreferredFieldName(schema, 'transfers', logicalField);
-
-  const fields = {
-    [fieldName('date')]: date,
-    [fieldName('account')]: [accountRecordId],
-    [fieldName('category')]: category,
-    [fieldName('amount')]: amount,
-    [fieldName('source')]: source,
+  const body = {
+    date,
+    account_id: accountId,
+    category,
+    amount,
+    source,
   };
 
-  if (weekStartDate) {
-    fields[fieldName('weekStartDate')] = weekStartDate;
-  }
+  if (weekStartDate) body.week_start_date = weekStartDate;
 
-  const created = await createRecord({
-    tableName: schema.tables.transfers,
-    fields,
-    typecast: true,
+  const created = await supabaseRequest('/transfers?select=*,accounts(account_name)', {
+    method: 'POST',
+    prefer: 'return=representation',
+    body,
   });
 
   if (!created.ok) {
@@ -167,9 +117,10 @@ export async function POST(req) {
       created.status || 500,
       created.error?.code || 'TRANSFER_CREATE_FAILED',
       created.error?.message || 'Failed to create transfer',
-      { table: schema.tables.transfers }
+      created.error?.details ? { details: created.error.details } : {}
     );
   }
 
-  return NextResponse.json({ success: true, id: created.data?.id });
+  const row = Array.isArray(created.data) ? created.data[0] : created.data;
+  return NextResponse.json({ success: true, id: row?.id });
 }

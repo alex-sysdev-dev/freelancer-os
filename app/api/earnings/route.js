@@ -1,71 +1,31 @@
-﻿import { NextResponse } from 'next/server';
-import { createRecord, fetchAllRecords } from '@/lib/airtable/client';
-import { getAirtableSchema, getPreferredFieldName } from '@/lib/airtable/schema';
-import { mapEarningRecord, sortByDateAsc, toFiniteNumber } from '@/lib/services/AirtableService';
+import { NextResponse } from 'next/server';
+import { supabaseRequest } from '@/lib/supabase/client';
+import { mapEarningRow, sortByDateAsc, toFiniteNumber } from '@/lib/services/SupabaseFinanceService';
 
 function errorResponse(status, code, message, details = {}) {
   return NextResponse.json({ error: message, code, details }, { status });
 }
 
-function uniqueValues(values) {
-  const seen = new Set();
-  const output = [];
-
-  for (const value of values) {
-    if (value === undefined || value === null || value === '') continue;
-
-    const key = JSON.stringify(value);
-    if (seen.has(key)) continue;
-
-    seen.add(key);
-    output.push(value);
-  }
-
-  return output;
-}
-
-async function createWithFieldFallbacks({ tableName, attempts }) {
-  const errors = [];
-
-  for (const fields of attempts) {
-    const result = await createRecord({
-      tableName,
-      fields,
-      typecast: true,
-    });
-
-    if (result.ok) return result;
-    errors.push(result.error?.message || 'Unknown Airtable create failure');
-  }
-
-  return {
-    ok: false,
-    status: 500,
-    error: {
-      code: 'EARNINGS_CREATE_FAILED',
-      message: errors.join(' | '),
-    },
-  };
+function isValidDateString(value) {
+  if (typeof value !== 'string' || !value.trim()) return false;
+  const parsed = new Date(value);
+  return !Number.isNaN(parsed.getTime());
 }
 
 export async function GET() {
-  const schema = getAirtableSchema();
-  const response = await fetchAllRecords({ tableName: schema.tables.earnings });
+  const response = await supabaseRequest('/earnings?select=*');
 
   if (!response.ok) {
     return errorResponse(
       response.status || 500,
       response.error?.code || 'EARNINGS_TABLE_READ_FAILED',
       response.error?.message || 'Unable to read earnings table',
-      { table: schema.tables.earnings }
+      response.error?.details ? { details: response.error.details } : {}
     );
   }
 
-  const mapped = response.data.records.map((record) =>
-    mapEarningRecord(record, schema.entities.earnings.fields)
-  );
-
-  return NextResponse.json(sortByDateAsc(mapped));
+  const rows = Array.isArray(response.data) ? response.data : [];
+  return NextResponse.json(sortByDateAsc(rows.map(mapEarningRow)));
 }
 
 export async function POST(req) {
@@ -81,12 +41,6 @@ export async function POST(req) {
   const date = typeof payload?.date === 'string' ? payload.date.trim() : '';
   const hoursWorked = toFiniteNumber(payload?.hoursWorked);
   const ratePerHour = toFiniteNumber(payload?.ratePerHour);
-
-  const isValidDateString = (value) => {
-    if (typeof value !== 'string' || !value.trim()) return false;
-    const parsed = new Date(value);
-    return !Number.isNaN(parsed.getTime());
-  };
 
   if (!platform || !project || !date || !isValidDateString(date)) {
     return errorResponse(
@@ -104,26 +58,16 @@ export async function POST(req) {
     );
   }
 
-  const schema = getAirtableSchema();
-  const fieldName = (logicalField) => getPreferredFieldName(schema, 'earnings', logicalField);
-
-  const prefersDuration = process.env.AIRTABLE_HOURS_IS_DURATION !== 'false';
-  const hoursAsSeconds = Math.round(hoursWorked * 3600);
-  const hoursCandidates = prefersDuration
-    ? uniqueValues([hoursAsSeconds, hoursWorked])
-    : uniqueValues([hoursWorked, hoursAsSeconds]);
-
-  const attempts = hoursCandidates.map((hoursValue) => ({
-    [fieldName('date')]: date,
-    [fieldName('platform')]: platform,
-    [fieldName('project')]: project,
-    [fieldName('hoursWorked')]: hoursValue,
-    [fieldName('ratePerHour')]: ratePerHour,
-  }));
-
-  const created = await createWithFieldFallbacks({
-    tableName: schema.tables.earnings,
-    attempts,
+  const created = await supabaseRequest('/earnings?select=*', {
+    method: 'POST',
+    prefer: 'return=representation',
+    body: {
+      date,
+      platform,
+      project,
+      hours_worked: hoursWorked,
+      rate_per_hour: ratePerHour,
+    },
   });
 
   if (!created.ok) {
@@ -131,19 +75,17 @@ export async function POST(req) {
       created.status || 500,
       created.error?.code || 'EARNINGS_CREATE_FAILED',
       created.error?.message || 'Failed to create earnings entry',
-      {
-        table: schema.tables.earnings,
-      }
+      created.error?.details ? { details: created.error.details } : {}
     );
   }
 
-  return NextResponse.json({
-    id: created.data?.id,
+  const row = Array.isArray(created.data) ? created.data[0] : created.data;
+  return NextResponse.json(mapEarningRow(row || {
+    id: null,
     date,
     platform,
     project,
-    hoursWorked,
-    ratePerHour,
-    amount: Math.round(hoursWorked * ratePerHour * 100) / 100,
-  });
+    hours_worked: hoursWorked,
+    rate_per_hour: ratePerHour,
+  }));
 }

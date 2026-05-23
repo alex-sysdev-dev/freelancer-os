@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('@/lib/airtable/client', () => ({
-  fetchAllRecords: vi.fn(),
-  createRecord: vi.fn(),
+vi.mock('@/lib/supabase/client', () => ({
+  supabaseRequest: vi.fn(),
 }))
 
 vi.mock('next/server', () => ({
@@ -15,7 +14,7 @@ vi.mock('next/server', () => ({
 }))
 
 import { GET, POST } from './route.js'
-import { fetchAllRecords, createRecord } from '@/lib/airtable/client'
+import { supabaseRequest } from '@/lib/supabase/client'
 
 function makeRequest(body) {
   return new Request('http://localhost/api/transfers', {
@@ -25,66 +24,55 @@ function makeRequest(body) {
   })
 }
 
+const SAVINGS_ID = '11111111-1111-4111-8111-111111111111'
+const CHECKING_ID = '22222222-2222-4222-8222-222222222222'
+
 const MOCK_TRANSFERS = [
   {
-    id: 'recTr1',
-    fields: {
-      Date: '2026-03-01',
-      Account: ['recAccSavings'],
-      Category: 'Income',
-      Amount: 1500,
-      'Signed Amount': 1500,
-      Source: 'Upwork',
-    },
+    id: 'tr-1',
+    date: '2026-03-01',
+    account_id: SAVINGS_ID,
+    accounts: { account_name: 'Savings' },
+    category: 'Deposit',
+    amount: 1500,
+    signed_amount: 1500,
+    source: 'Upwork',
   },
   {
-    id: 'recTr2',
-    fields: {
-      Date: '2026-01-15',
-      Account: ['recAccChecking'],
-      Category: 'Expense',
-      Amount: -200,
-      'Signed Amount': -200,
-      Source: 'Manual',
-    },
+    id: 'tr-2',
+    date: '2026-01-15',
+    account_id: CHECKING_ID,
+    accounts: { account_name: 'Checking' },
+    category: 'Withdrawal',
+    amount: 200,
+    signed_amount: -200,
+    source: 'Manual',
   },
-]
-
-const MOCK_ACCOUNTS = [
-  { id: 'recAccSavings', fields: { 'Account Name': 'Savings' } },
-  { id: 'recAccChecking', fields: { 'Account Name': 'Checking' } },
 ]
 
 beforeEach(() => {
   vi.clearAllMocks()
 })
 
-// ---------------------------------------------------------------------------
-// GET /api/transfers
-// ---------------------------------------------------------------------------
 describe('GET /api/transfers', () => {
-  it('returns transfers sorted newest-first with resolved account names', async () => {
-    fetchAllRecords
-      .mockResolvedValueOnce({ ok: true, data: { records: MOCK_TRANSFERS } })
-      .mockResolvedValueOnce({ ok: true, data: { records: MOCK_ACCOUNTS } })
+  it('returns transfers sorted newest-first with account names', async () => {
+    supabaseRequest.mockResolvedValue({ ok: true, data: MOCK_TRANSFERS })
 
     const response = await GET()
-    expect(response.status).toBe(200)
     const data = await response.json()
+    expect(response.status).toBe(200)
     expect(data).toHaveLength(2)
-    // sortByDateDesc — March before January
     expect(data[0].date).toBe('2026-03-01')
     expect(data[1].date).toBe('2026-01-15')
-    // account ID resolved to name
     expect(data[0].account).toBe('Savings')
     expect(data[1].account).toBe('Checking')
   })
 
   it('returns error when transfers fetch fails', async () => {
-    fetchAllRecords.mockResolvedValue({
+    supabaseRequest.mockResolvedValue({
       ok: false,
       status: 500,
-      error: { code: 'DB_ERROR', message: 'Airtable unavailable' },
+      error: { code: 'DB_ERROR', message: 'Supabase unavailable' },
     })
 
     const response = await GET()
@@ -92,22 +80,18 @@ describe('GET /api/transfers', () => {
     expect((await response.json()).code).toBe('DB_ERROR')
   })
 
-  it('still returns transfers when accounts fetch fails (uses raw IDs)', async () => {
-    fetchAllRecords
-      .mockResolvedValueOnce({ ok: true, data: { records: MOCK_TRANSFERS } })
-      .mockResolvedValueOnce({ ok: false, status: 503, error: { code: 'ACCOUNTS_FAIL' } })
+  it('falls back to account_id when the joined account name is absent', async () => {
+    supabaseRequest.mockResolvedValue({
+      ok: true,
+      data: [{ ...MOCK_TRANSFERS[0], accounts: null }],
+    })
 
     const response = await GET()
-    expect(response.status).toBe(200)
     const data = await response.json()
-    // Falls back gracefully — account field is the raw linked value
-    expect(data).toHaveLength(2)
+    expect(data[0].account).toBe(SAVINGS_ID)
   })
 })
 
-// ---------------------------------------------------------------------------
-// POST /api/transfers
-// ---------------------------------------------------------------------------
 describe('POST /api/transfers', () => {
   it('returns 400 INVALID_JSON for malformed body', async () => {
     const req = new Request('http://localhost/api/transfers', {
@@ -121,7 +105,7 @@ describe('POST /api/transfers', () => {
   })
 
   it('returns 400 MISSING_REQUIRED_FIELDS when date is absent', async () => {
-    const response = await POST(makeRequest({ accountId: 'recABC', amount: 100 }))
+    const response = await POST(makeRequest({ accountId: SAVINGS_ID, amount: 100 }))
     expect(response.status).toBe(400)
     expect((await response.json()).code).toBe('MISSING_REQUIRED_FIELDS')
   })
@@ -133,15 +117,15 @@ describe('POST /api/transfers', () => {
   })
 
   it('returns 400 MISSING_REQUIRED_FIELDS when amount is absent', async () => {
-    const response = await POST(makeRequest({ date: '2026-01-01', accountId: 'recABC' }))
+    const response = await POST(makeRequest({ date: '2026-01-01', accountId: SAVINGS_ID }))
     expect(response.status).toBe(400)
     expect((await response.json()).code).toBe('MISSING_REQUIRED_FIELDS')
   })
 
   it('returns 400 ACCOUNT_NOT_FOUND when account name cannot be resolved', async () => {
-    fetchAllRecords.mockResolvedValue({
+    supabaseRequest.mockResolvedValue({
       ok: true,
-      data: { records: [{ id: 'recAcc1', fields: { 'Account Name': 'Savings' } }] },
+      data: [{ id: SAVINGS_ID, account_name: 'Savings' }],
     })
 
     const response = await POST(makeRequest({ date: '2026-01-01', account: 'Nonexistent Account', amount: 500 }))
@@ -149,32 +133,35 @@ describe('POST /api/transfers', () => {
     expect((await response.json()).code).toBe('ACCOUNT_NOT_FOUND')
   })
 
-  it('creates a transfer using a direct Airtable record ID', async () => {
-    createRecord.mockResolvedValue({ ok: true, data: { id: 'recNewTr' } })
+  it('creates a transfer using a direct Supabase account UUID', async () => {
+    supabaseRequest.mockResolvedValue({ ok: true, data: [{ id: 'tr-new' }] })
 
-    // Record IDs matching /^rec[a-zA-Z0-9]+$/ skip the accounts lookup
     const response = await POST(makeRequest({
       date: '2026-03-15',
-      accountId: 'recAccSavings',
+      accountId: SAVINGS_ID,
       amount: 750,
-      category: 'Income',
+      category: 'Deposit',
       source: 'Upwork',
     }))
 
-    expect(response.status).toBe(200)
     const data = await response.json()
+    expect(response.status).toBe(200)
     expect(data.success).toBe(true)
-    expect(data.id).toBe('recNewTr')
-    // fetchAllRecords should NOT have been called (ID was passed directly)
-    expect(fetchAllRecords).not.toHaveBeenCalled()
+    expect(data.id).toBe('tr-new')
+    expect(supabaseRequest).toHaveBeenCalledTimes(1)
+    expect(supabaseRequest.mock.calls[0][1].body).toMatchObject({
+      date: '2026-03-15',
+      account_id: SAVINGS_ID,
+      amount: 750,
+      category: 'Deposit',
+      source: 'Upwork',
+    })
   })
 
-  it('creates a transfer by resolving an account name to a record ID', async () => {
-    fetchAllRecords.mockResolvedValue({
-      ok: true,
-      data: { records: [{ id: 'recAccSavings', fields: { 'Account Name': 'Savings' } }] },
-    })
-    createRecord.mockResolvedValue({ ok: true, data: { id: 'recNewTr2' } })
+  it('creates a transfer by resolving an account name to an ID', async () => {
+    supabaseRequest
+      .mockResolvedValueOnce({ ok: true, data: [{ id: SAVINGS_ID, account_name: 'Savings' }] })
+      .mockResolvedValueOnce({ ok: true, data: [{ id: 'tr-new-2' }] })
 
     const response = await POST(makeRequest({
       date: '2026-03-15',
@@ -182,28 +169,24 @@ describe('POST /api/transfers', () => {
       amount: 300,
     }))
 
-    expect(response.status).toBe(200)
     const data = await response.json()
-    expect(data.id).toBe('recNewTr2')
-    // Verify createRecord received the resolved record ID wrapped in an array
-    const fields = createRecord.mock.calls[0][0].fields
-    const fieldValues = Object.values(fields)
-    expect(fieldValues).toContainEqual(['recAccSavings'])
+    expect(response.status).toBe(200)
+    expect(data.id).toBe('tr-new-2')
+    expect(supabaseRequest.mock.calls[1][1].body.account_id).toBe(SAVINGS_ID)
   })
 
   it('defaults category to Deposit and source to Manual when omitted', async () => {
-    createRecord.mockResolvedValue({ ok: true, data: { id: 'recDefaults' } })
+    supabaseRequest.mockResolvedValue({ ok: true, data: [{ id: 'tr-defaults' }] })
 
-    await POST(makeRequest({ date: '2026-03-15', accountId: 'recAccXYZ', amount: 100 }))
+    await POST(makeRequest({ date: '2026-03-15', accountId: SAVINGS_ID, amount: 100 }))
 
-    const fields = createRecord.mock.calls[0][0].fields
-    const fieldValues = Object.values(fields)
-    expect(fieldValues).toContain('Deposit')
-    expect(fieldValues).toContain('Manual')
+    const body = supabaseRequest.mock.calls[0][1].body
+    expect(body.category).toBe('Deposit')
+    expect(body.source).toBe('Manual')
   })
 
-  it('returns error when Airtable create fails', async () => {
-    createRecord.mockResolvedValue({
+  it('returns error when Supabase create fails', async () => {
+    supabaseRequest.mockResolvedValue({
       ok: false,
       status: 422,
       error: { code: 'FIELD_ERROR', message: 'Invalid linked record' },
@@ -211,7 +194,7 @@ describe('POST /api/transfers', () => {
 
     const response = await POST(makeRequest({
       date: '2026-03-15',
-      accountId: 'recAccSavings',
+      accountId: SAVINGS_ID,
       amount: 500,
     }))
     expect(response.status).toBe(422)

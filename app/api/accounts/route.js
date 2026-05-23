@@ -1,27 +1,26 @@
-﻿import { NextResponse } from 'next/server';
-import { createRecord, fetchAllRecords } from '@/lib/airtable/client';
-import { getAirtableSchema, getPreferredFieldName } from '@/lib/airtable/schema';
-import { mapAccountRecord, toFiniteNumber } from '@/lib/services/AirtableService';
+import { NextResponse } from 'next/server';
+import { supabaseRequest } from '@/lib/supabase/client';
+import { mapAccountRow, toFiniteNumber } from '@/lib/services/SupabaseFinanceService';
 
 function errorResponse(status, code, message, details = {}) {
   return NextResponse.json({ error: message, code, details }, { status });
 }
 
 export async function GET() {
-  const schema = getAirtableSchema();
-  const response = await fetchAllRecords({ tableName: schema.tables.accounts });
+  const response = await supabaseRequest('/accounts?select=*');
 
   if (!response.ok) {
     return errorResponse(
       response.status || 500,
       response.error?.code || 'ACCOUNTS_TABLE_READ_FAILED',
       response.error?.message || 'Unable to read accounts table',
-      { table: schema.tables.accounts }
+      response.error?.details ? { details: response.error.details } : {}
     );
   }
 
-  const accounts = response.data.records
-    .map((record) => mapAccountRecord(record, schema.entities.accounts.fields))
+  const rows = Array.isArray(response.data) ? response.data : [];
+  const accounts = rows
+    .map(mapAccountRow)
     .sort((a, b) => a.accountName.localeCompare(b.accountName));
 
   return NextResponse.json(accounts);
@@ -43,20 +42,17 @@ export async function POST(req) {
     return errorResponse(400, 'MISSING_REQUIRED_FIELDS', 'accountName is required');
   }
 
-  const schema = getAirtableSchema();
-  const fieldName = (logicalField) => getPreferredFieldName(schema, 'accounts', logicalField);
-
-  const fields = {
-    [fieldName('name')]: accountName,
+  const body = {
+    account_name: accountName,
   };
 
-  if (type) fields[fieldName('type')] = type;
-  if (Number.isFinite(startingBalance)) fields[fieldName('startingBalance')] = startingBalance;
+  if (type) body.type = type;
+  if (Number.isFinite(startingBalance)) body.starting_balance = startingBalance;
 
-  const created = await createRecord({
-    tableName: schema.tables.accounts,
-    fields,
-    typecast: true,
+  const created = await supabaseRequest('/accounts?select=*', {
+    method: 'POST',
+    prefer: 'return=representation',
+    body,
   });
 
   if (!created.ok) {
@@ -64,9 +60,10 @@ export async function POST(req) {
       created.status || 500,
       created.error?.code || 'ACCOUNT_CREATE_FAILED',
       created.error?.message || 'Failed to create account',
-      { table: schema.tables.accounts }
+      created.error?.details ? { details: created.error.details } : {}
     );
   }
 
-  return NextResponse.json({ success: true, id: created.data?.id });
+  const row = Array.isArray(created.data) ? created.data[0] : created.data;
+  return NextResponse.json({ success: true, id: row?.id });
 }
