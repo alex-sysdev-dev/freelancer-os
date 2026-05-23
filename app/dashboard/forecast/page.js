@@ -1,16 +1,70 @@
 ﻿"use client";
 
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import CashRunwaySettingsForm from '@/components/CashRunwaySettingsForm';
 import ErrorBanner from '@/components/ErrorBanner';
 import useFinanceData from '@/lib/hooks/useFinanceData';
 import { usd } from '@/lib/finance/ui';
 
+function monthsLabel(value) {
+  if (value === null || value === undefined) return '--';
+  return `${value.toFixed(1)} mo`;
+}
+
 export default function ForecastPage() {
-  const { error, isLoading, earningsAnalytics } = useFinanceData();
+  const { error, isLoading, settings, runwayAnalytics, loadFinanceData, earningsAnalytics } = useFinanceData();
 
   return (
     <div className="space-y-8">
       <ErrorBanner message={error} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="glass-tile p-5 border border-[#2f4b70]">
+          <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Tax reserve needed</p>
+          <p className="text-2xl font-semibold mt-2">{isLoading ? '--' : usd(runwayAnalytics.taxReserveNeeded)}</p>
+        </div>
+        <div className="glass-tile p-5 border border-[#2f4b70]">
+          <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Safe-to-spend cash</p>
+          <p className="text-2xl font-semibold mt-2">{isLoading ? '--' : usd(runwayAnalytics.safeToSpend)}</p>
+        </div>
+        <div className="glass-tile p-5 border border-[#2f4b70]">
+          <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Runway months</p>
+          <p className="text-2xl font-semibold mt-2">{isLoading ? '--' : monthsLabel(runwayAnalytics.runwayMonths)}</p>
+        </div>
+        <div className={`glass-tile p-5 border ${runwayAnalytics.isBelowBuffer ? 'border-red-500/70' : 'border-[#2f4b70]'}`}>
+          <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Buffer gap</p>
+          <p className={`text-2xl font-semibold mt-2 ${runwayAnalytics.isBelowBuffer ? 'text-red-300' : 'text-accent'}`}>
+            {isLoading ? '--' : usd(runwayAnalytics.bufferGap)}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6">
+        <div className="glass-tile-dark p-5 border border-[#2f4b70]">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-graphite-faint">Cash runway</p>
+              <p className="mt-3 text-4xl font-semibold text-white">{isLoading ? '--' : monthsLabel(runwayAnalytics.runwayMonths)}</p>
+            </div>
+            <div className="grid grid-cols-1 gap-3 text-sm text-graphite-muted sm:grid-cols-3 md:min-w-[430px]">
+              <div className="rounded-md border border-[#2f4b70] bg-[#07111e] p-3">
+                <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Expense target</p>
+                <p className="mt-2 font-semibold text-white">{usd(runwayAnalytics.monthlyExpenseTarget)}</p>
+              </div>
+              <div className="rounded-md border border-[#2f4b70] bg-[#07111e] p-3">
+                <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Reserve rate</p>
+                <p className="mt-2 font-semibold text-white">{Math.round(runwayAnalytics.taxReserveRate * 100)}%</p>
+              </div>
+              <div className="rounded-md border border-[#2f4b70] bg-[#07111e] p-3">
+                <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Cash buffer</p>
+                <p className="mt-2 font-semibold text-white">{usd(runwayAnalytics.minimumCashBuffer)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <CashRunwaySettingsForm settings={settings} onSaved={loadFinanceData} />
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <div className="glass-tile p-5 border border-[#2f4b70]">
           <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Latest week</p>
@@ -62,14 +116,6 @@ export default function ForecastPage() {
         </div>
       </div>
 
-      <div className="glass-tile p-5 border border-[#2f4b70]">
-        <p className="text-xs uppercase tracking-[0.2em] text-graphite-faint">Forecast notes</p>
-        <ul className="mt-4 space-y-2 text-sm text-graphite-muted">
-          <li>2-week forecast tracks the most recent weekly baseline x2 when table formula value is unavailable.</li>
-          <li>1-month forecast uses recent weekly baseline x4.33 when formula value is unavailable.</li>
-          <li>6-month forecast uses monthly forecast x6 when formula value is unavailable.</li>
-        </ul>
-      </div>
     </div>
   );
 }

@@ -11,6 +11,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.106.1",
     "@vercel/analytics": "^1.6.1",
     "@vercel/blob": "^2.3.0",
     "airtable": "^0.12.2",
