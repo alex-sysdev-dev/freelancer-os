@@ -166,3 +166,51 @@ create policy "Users can delete own transfers"
 on public.transfers for delete
 to authenticated
 using ((select auth.uid()) = user_id);
+
+create table if not exists public.finance_settings (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  monthly_expense_target numeric(12, 2) not null default 3200,
+  tax_reserve_rate numeric(5, 4) not null default 0.25 check (tax_reserve_rate >= 0 and tax_reserve_rate <= 1),
+  minimum_cash_buffer numeric(12, 2) not null default 5000,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists finance_settings_updated_at_idx on public.finance_settings (updated_at desc);
+
+drop trigger if exists set_finance_settings_updated_at on public.finance_settings;
+create trigger set_finance_settings_updated_at
+before update on public.finance_settings
+for each row execute function public.set_updated_at();
+
+alter table public.finance_settings enable row level security;
+
+grant select, insert, update, delete on public.finance_settings to authenticated;
+grant select, insert, update, delete on public.finance_settings to service_role;
+
+drop policy if exists "Users can read own finance settings" on public.finance_settings;
+create policy "Users can read own finance settings"
+on public.finance_settings for select
+to authenticated
+using (user_id is null or (select auth.uid()) = user_id);
+
+drop policy if exists "Users can create own finance settings" on public.finance_settings;
+create policy "Users can create own finance settings"
+on public.finance_settings for insert
+to authenticated
+with check (user_id is null or (select auth.uid()) = user_id);
+
+drop policy if exists "Users can update own finance settings" on public.finance_settings;
+create policy "Users can update own finance settings"
+on public.finance_settings for update
+to authenticated
+using (user_id is null or (select auth.uid()) = user_id)
+with check (user_id is null or (select auth.uid()) = user_id);
+
+drop policy if exists "Users can delete own finance settings" on public.finance_settings;
+create policy "Users can delete own finance settings"
+on public.finance_settings for delete
+to authenticated
+using (user_id is null or (select auth.uid()) = user_id);
+

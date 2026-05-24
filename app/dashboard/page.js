@@ -19,8 +19,13 @@ import LinkedTile from '@/components/LinkedTile';
 import useFinanceData from '@/lib/hooks/useFinanceData';
 import { CHART_COLORS, usd } from '@/lib/finance/ui';
 
+function monthsLabel(value) {
+  if (value === null || value === undefined) return '--';
+  return `${value.toFixed(1)} mo`;
+}
+
 export default function DashboardOverviewPage() {
-  const { error, isLoading, accounts, loadFinanceData, earningsAnalytics, wealthAnalytics } = useFinanceData();
+  const { error, isLoading, accounts, loadFinanceData, earningsAnalytics, wealthAnalytics, runwayAnalytics } = useFinanceData();
 
   return (
     <div className="space-y-8">
@@ -51,6 +56,29 @@ export default function DashboardOverviewPage() {
           <p className="text-2xl font-semibold mt-2">{isLoading ? '--' : usd(wealthAnalytics.totalNetTransfers)}</p>
         </LinkedTile>
       </div>
+
+      <LinkedTile href="/dashboard/forecast" className="glass-tile-dark p-5 border border-[#2f4b70]">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div>
+            <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Safe-to-spend cash</p>
+            <p className="mt-2 text-2xl font-semibold text-white">{isLoading ? '--' : usd(runwayAnalytics.safeToSpend)}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Runway</p>
+            <p className="mt-2 text-2xl font-semibold text-white">{isLoading ? '--' : monthsLabel(runwayAnalytics.runwayMonths)}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Tax reserve</p>
+            <p className="mt-2 text-2xl font-semibold text-white">{isLoading ? '--' : usd(runwayAnalytics.taxReserveNeeded)}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-widest text-graphite-faint">Buffer gap</p>
+            <p className={`mt-2 text-2xl font-semibold ${runwayAnalytics.isBelowBuffer ? 'text-red-300' : 'text-accent'}`}>
+              {isLoading ? '--' : usd(runwayAnalytics.bufferGap)}
+            </p>
+          </div>
+        </div>
+      </LinkedTile>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <LinkedTile href="/dashboard/earnings" className="glass-tile-dark p-5 border border-[#2f4b70]">
